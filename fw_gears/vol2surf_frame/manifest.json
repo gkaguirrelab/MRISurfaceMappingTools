@@ -1,0 +1,96 @@
+{
+	"name": "vol2surf",
+	"label": "vol2surf: Map MRI images between spaces",
+	"description": "This gear maps brain images between different spaces. With this tool any volumetric image (statistical map or whole bold timeseries) can be mapped to any freesurfer surface (native or template). However, native brain interpolations between different surfaces are not currently supported and therefore, only template transformations can be performed at the surface level (e.g. fsaverage to FSLR)",
+	"author": "Ozenc Taskin",
+	"maintainer": "Ozenc Taskin <huseyinozenc.taskin@pennmedicine.upenn.edu>",
+	"source": "https://github.com/gkaguirrelab/MRISurfaceMappingTools",
+	"url": "https://github.com/gkaguirrelab/MRISurfaceMappingTools/fw_gears",
+	"version": "0.1.0",
+	"custom": {
+		"flywheel": {
+			"suite": "GKAguirreLab"
+		},
+		"docker-image": ""
+	},
+	"license": "Other",
+	"config": {
+		"imageName": {
+			"description": "Name of the image you want to process in a zip or tar archive. This is implemented so that fmriprep, hcp, or any other zip file can be used as input. If your input is a single image and not an archive, enter NA here. Otherwise put the name of the image you want to process. The image can be located anywhere in your zip archive. This gear finds it. But make sure you do not have two different images with the same name in your archive.",
+			"type": "string"
+		},
+		"imageType": {
+			"description": "Type of the input image",
+			"type": "string",
+			"enum": [
+				"volumetric",
+				"freesurfer-surface",
+				"cifti-surface"
+                "gifti-surface"
+			]
+		},
+		"myVolumeIsInMNI": {
+			"default": "false",
+			"description": "Click this if your input is a volume in the MNI152 space and you want to map to standard fsaverage. Increases processing speed and accuracy",
+			"type": "string"
+		},
+		"TR": {
+			"description": "TR of the input image is required to make the cifti maps. If you are not making cifti maps, you can enter 0 or any number here",
+			"type": "number"
+		},
+		"volumeToCustomFreesurferSurface": {
+			"default": false,
+			"description": "Enable this if your input is a volume and you want to map to a custom recon-all surface. You need to provide a zipped recon-all structure for this. See the inputs section. If you do this you cannot use gifti and cifti mapping options",
+			"type": "boolean"
+		},
+		"volumeToFsaverage": {
+			"default": true,
+			"description": "Enable this if your input is a volume and you want to map to fsaverage.",
+			"type": "boolean"
+		},
+		"fsaverageToGiftiFSLR": {
+			"default": true,
+			"description": "Enable this if your input is in fsaverage space and you want to map to FSLR gifti space. You can also enable this if your input is a volumetric image and you use the volumeToFsaverage option. That way you can combine two configs and obtain gifti images with your fsaverage images",
+			"type": "boolean"
+		},
+		"giftiFSLRToCiftiFSLR": {
+			"default": true,
+			"description": "Enable this if your input is a gifti in FSLR space and you want to create CITI dtseries images. You can also enable this if your input is a volumetric image and you use both the volumeToFsaverage and fsaverageToGiftiFSLR options. That way you can combine all three pipelines and obtain gifti and cifti images with your fsaverage images",
+			"type": "boolean"
+		}
+	},
+	"inputs": {
+		"inputImage": {
+			"base": "file",
+			"description": "Single image or any zip archive. The gear can locate the image you want to process in a zip archive. See the imageName config option for the details",
+			"optional": false
+			}
+		},
+		"inputTemplate": {
+			"base": "file",
+			"description": "High-res template that is in the same space with the your input image. If left empty, the gear uses MNI152",
+			"optional": true
+			}
+		},
+		"zippedReconAll": {
+			"description": "Zipped recon-all output to map the images to. If not specified and volumeToFreesurfer option is enabled, the script maps volume to fsaverage space.",
+			"base": "file",
+			"optional": true,
+			"type": {
+				"enum": [
+					"archive"
+				]
+			}
+		},
+		"zippedHCPStructure": {
+			"description": "Currently not supported",
+			"base": "file",
+			"optional": true,
+			"type": {
+				"enum": [
+					"archive"
+				]
+			}
+		}
+	}
+}
