@@ -1,7 +1,7 @@
 {
 	"name": "vol2surf",
-	"label": "vol2surf: Map MRI images between spaces",
-	"description": "This gear maps brain images between different spaces. With this tool any volumetric image (statistical map or whole bold timeseries) can be mapped to any freesurfer surface (native or template). However, native brain interpolations between different surfaces are not currently supported and therefore, only template transformations can be performed at the surface level (e.g. fsaverage to FSLR)",
+	"label": "vol2surf: Map volumetric MRI images to fsaverage and FSLR surfaces",
+	"description": "This gear maps volumetric brain images to surfaces. With this tool any volumetric image (statistical map or whole bold timeseries) can be mapped to any freesurfer surface (native or fsaverage). However, mapping to native gifti/cifti space is not currently implemented, therefore, images can only be mapped to FSLR32k gifti/cifti",
 	"author": "Ozenc Taskin",
 	"maintainer": "Ozenc Taskin <huseyinozenc.taskin@pennmedicine.upenn.edu>",
 	"source": "https://github.com/gkaguirrelab/MRISurfaceMappingTools",
@@ -16,11 +16,11 @@
 	"license": "Other",
 	"config": {
 		"imageName": {
-			"description": "Name of the image you want to process in a zip or tar archive. This is implemented so that fmriprep, hcp, or any other zip file can be used as input. If your input is a single image and not an archive, enter NA here. Otherwise put the name of the image you want to process. The image can be located anywhere in your zip archive. This gear finds it. But make sure you do not have two different images with the same name in your archive.",
+			"description": "Name of the image you want to process in a zip or tar archive. This is implemented so that fmriprep, hcp, or any other zip output can be used as input. If your input is a single image and not an archive, enter NA here. Otherwise put the name of the image in your archive you want to process. The image can be anywhere in your zip archive. This gear will find it. But make sure that you do not have two different images with the same name in your archive.",
 			"type": "string"
 		},
 		"imageType": {
-			"description": "Type of the input image",
+			"description": "Type of the input image. Currently, only volumetric inputs are accepted.",
 			"type": "string",
 			"enum": [
 				"volumetric",
@@ -29,33 +29,18 @@
                 "gifti-surface"
 			]
 		},
-		"myVolumeIsInMNI": {
+		"MNItoFsaverage": {
 			"default": "false",
-			"description": "Click this if your input is a volume in the MNI152 space and you want to map to standard fsaverage. Increases processing speed and accuracy",
+			"description": "Enable this if your input is a volume in the MNI152 space and you want to map to standard fsaverage. Increases processing speed",
 			"type": "string"
 		},
 		"TR": {
-			"description": "TR of the input image is required to make the cifti maps. If you are not making cifti maps, you can enter 0 or any number here",
+			"description": "TR of the input image is required to make the cifti maps.",
 			"type": "number"
 		},
-		"volumeToCustomFreesurferSurface": {
+		"volumetricToCustomFreesurferSurface": {
 			"default": false,
-			"description": "Enable this if your input is a volume and you want to map to a custom recon-all surface. You need to provide a zipped recon-all structure for this. See the inputs section. If you do this you cannot use gifti and cifti mapping options",
-			"type": "boolean"
-		},
-		"volumeToFsaverage": {
-			"default": true,
-			"description": "Enable this if your input is a volume and you want to map to fsaverage.",
-			"type": "boolean"
-		},
-		"fsaverageToGiftiFSLR": {
-			"default": true,
-			"description": "Enable this if your input is in fsaverage space and you want to map to FSLR gifti space. You can also enable this if your input is a volumetric image and you use the volumeToFsaverage option. That way you can combine two configs and obtain gifti images with your fsaverage images",
-			"type": "boolean"
-		},
-		"giftiFSLRToCiftiFSLR": {
-			"default": true,
-			"description": "Enable this if your input is a gifti in FSLR space and you want to create CITI dtseries images. You can also enable this if your input is a volumetric image and you use both the volumeToFsaverage and fsaverageToGiftiFSLR options. That way you can combine all three pipelines and obtain gifti and cifti images with your fsaverage images",
+			"description": "Enable this if your input is a volume and you want to map to a custom recon-all surface rather than fsaverage. You need to provide a zipped recon-all structure for this. See the inputs section. Currently, if you do this you cannot get gifti and cifti maps since native hemisphere mapping is not yet implemented",
 			"type": "boolean"
 		}
 	},

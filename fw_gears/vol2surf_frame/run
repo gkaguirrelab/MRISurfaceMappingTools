@@ -26,12 +26,9 @@ config = job_config['config']
 
 imageName = config['imageName']
 imageType = config['imageType']
-myVolumeIsInMNI = config['myVolumeIsInMNI']
+MNItoFsaverage = config['MNItoFsaverage']
 TR = config['TR']
-volumeToCustomFreesurferSurface = config['volumeToCustomFreesurferSurface']
-volumeToFsaverage = config['volumeToFsaverage']
-fsaverageToGiftiFSLR = config['fsaverageToGiftiFSLR']
-giftiFSLRToCiftiFSLR = config['giftiFSLRToCiftiFSLR']
+volumeToCustomFreesurferSurface = config['volumetricToCustomFreesurferSurface']
 
 ################### Set path to input ##############################
 inputImage_path = os.path.join(flywheel_base, 'input/inputImage/')
@@ -46,9 +43,9 @@ if os.path.splitext(inputImage)[1] == 'zip':
     inputImage = locate_file(imageName, unzipped_file_path)
 
 if os.path.exists(inputTemplate_path):
-    inputTemplate_path = os.path.join(inputTemplate_path, os.listdir(inputTemplate_path)[0])
+    inputTemplate = os.path.join(inputTemplate_path, os.listdir(inputTemplate_path)[0])
 else:
-    inputTemplate_path = 'NA'
+    inputTemplate = 'NA'
     
 if os.path.exists(zippedReconAll_path):
     zippedReconAll = os.path.join(zippedReconAll_path, os.listdir(zippedReconAll_path)[0])
@@ -70,20 +67,25 @@ os.system('unzip -q %s -d %s' % (standard_mesh_path, standard_meshes))
 
 ################### Run Algorithm ################################
 
-if volumeToFsaverage:
+image = nb.load(inputImage)
+image_type = str(type(image))[16:21]
+
+if image_type == 'nifti':
     left_intgifti, right_intgifti, left_mgz, right_mgz = map_vol2surf(inputImage, 
-                                                                      inputTemplate_path, 
+                                                                      inputTemplate, 
                                                                       first_output_dir, 
-                                                                      from_mni_to_fsaverage=fsaverageToGiftiFSLR, 
+                                                                      from_mni_to_fsaverage=MNItoFsaverage, 
                                                                       recon_all_folder=unzipped_recon_all)
-if volumeToFsaverage and fsaverageToGiftiFSLR:
+    
     final_gifti_left, final_gifti_right = map_fs2gifti(left_intgifti, right_intgifti, 
                                                        standard_meshes, first_output_dir, 
                                                        resolution='32k')
-
-if fsaverageToGiftiFSLR and giftiFSLRToCiftiFSLR:
+      
     final_dtseries = map_gifti2cifti(final_gifti_left, final_gifti_left, 
                                      standard_meshes, TR, first_output_dir)   
-      
+else:
+    raise RuntimeError('The image you have is not a nifti image. Currently, only volumetric to surface mapping is supported')
+
 ################## Zip everything and output ##################################
 
+os.system('cd %s; zip -q %s *' % (first_output_dir, os.path.join(final_output_dir, 'surface.zip')))
