@@ -26,23 +26,23 @@ def map_fs2gifti(fs_gifti_left, fs_gifti_right, standard_mesh_atlases_folder, ou
     current_sphere_right = os.path.join(standard_mesh_atlases_folder, 'resample_fsaverage',
                                         'fsaverage_std_sphere.R.164k_fsavg_R.surf.gii')    
     new_sphere_left = os.path.join(standard_mesh_atlases_folder, 'resample_fsaverage',
-                                        f'fs_LR-deformed_to-fsaverage.L.sphere.{resolution}_fs_LR.surf.gii') 
+                                        'fs_LR-deformed_to-fsaverage.L.sphere.%s_fs_LR.surf.gii' % resolution) 
     new_sphere_right = os.path.join(standard_mesh_atlases_folder, 'resample_fsaverage',
-                                        f'fs_LR-deformed_to-fsaverage.R.sphere.{resolution}_fs_LR.surf.gii')     
-    metric_out_left = os.path.join(main_output_folder, f'fs_LR-interpolated.L.{resolution}.func.gii') 
-    metric_out_right = os.path.join(main_output_folder, f'fs_LR-interpolated.R.{resolution}.func.gii')    
+                                        'fs_LR-deformed_to-fsaverage.R.sphere.%s_fs_LR.surf.gii' % resolution)     
+    metric_out_left = os.path.join(main_output_folder, 'fs_LR-interpolated.L.%s.func.gii' % resolution) 
+    metric_out_right = os.path.join(main_output_folder, 'fs_LR-interpolated.R.%s.func.gii' % resolution)    
     current_area_left = os.path.join(standard_mesh_atlases_folder, 'resample_fsaverage',
-                                         f'fsaverage.L.midthickness_va_avg.164k_fsavg_L.shape.gii') 
+                                         'fsaverage.L.midthickness_va_avg.164k_fsavg_L.shape.gii') 
     current_area_right = os.path.join(standard_mesh_atlases_folder, 'resample_fsaverage',
-                                         f'fsaverage.R.midthickness_va_avg.164k_fsavg_R.shape.gii')     
+                                         'fsaverage.R.midthickness_va_avg.164k_fsavg_R.shape.gii')     
     new_area_left = os.path.join(standard_mesh_atlases_folder, 'resample_fsaverage',
-                                         f'fs_LR.L.midthickness_va_avg.{resolution}_fs_LR.shape.gii')    
+                                         'fs_LR.L.midthickness_va_avg.%s_fs_LR.shape.gii' % resolution)    
     new_area_right = os.path.join(standard_mesh_atlases_folder, 'resample_fsaverage',
-                                         f'fs_LR.R.midthickness_va_avg.{resolution}_fs_LR.shape.gii')     
+                                         'fs_LR.R.midthickness_va_avg.%s_fs_LR.shape.gii' % resolution)     
    
     # Assemble the run commands and call  
-    wb_run_left_string = f'wb_command -metric-resample {fs_gifti_left} {current_sphere_left} {new_sphere_left} ADAP_BARY_AREA {metric_out_left} -area-metrics {current_area_left} {new_area_left}'
-    wb_run_right_string = f'wb_command -metric-resample {fs_gifti_right} {current_sphere_right} {new_sphere_right} ADAP_BARY_AREA {metric_out_right} -area-metrics {current_area_right} {new_area_right}'   
+    wb_run_left_string = 'wb_command -metric-resample %s %s %s ADAP_BARY_AREA %s -area-metrics %s %s' % (fs_gifti_left, current_sphere_left, new_sphere_left, metric_out_left, current_area_left, new_area_left)
+    wb_run_right_string = 'wb_command -metric-resample %s %s %s ADAP_BARY_AREA %s -area-metrics %s %s' % (fs_gifti_right, current_sphere_right, new_sphere_right, metric_out_right, current_area_right, new_area_right)
     
     os.system(wb_run_left_string)
     os.system(wb_run_right_string)

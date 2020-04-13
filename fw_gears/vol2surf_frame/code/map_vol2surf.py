@@ -60,7 +60,7 @@ def map_vol2surf(image_to_interpolate, template_to_interpolate, output_path, fro
        
     # Create the main output folder at the specified path
     main_output_folder = os.path.join(output_path, 'fs-surf')
-    os.system(f'mkdir {main_output_folder}')
+    os.system('mkdir %s' % main_output_folder)
     
     # Set the output image names
     right_hemi_output_path_gifti = os.path.join(main_output_folder, image_name + '-rh.gii')
@@ -72,10 +72,10 @@ def map_vol2surf(image_to_interpolate, template_to_interpolate, output_path, fro
     if from_mni_to_fsaverage:
         if recon_all_folder != 'NA':
             print('Warning: You specified a recon all folder but also using the from_mni_to_fsaverage option. Assuming that you are using the MNI template and interpolating to fsaverage. Revise the flags if this is not what you want')    
-        os.system(f'mri_vol2surf --src {image_to_interpolate} --out {right_hemi_output_path_gifti} --hemi rh --mni152reg')
-        os.system(f'mri_vol2surf --src {image_to_interpolate} --out {left_hemi_output_path_gifti} --hemi lh --mni152reg')
-        os.system(f'mri_vol2surf --src {image_to_interpolate} --out {right_hemi_output_path_mgz} --hemi rh --mni152reg')
-        os.system(f'mri_vol2surf --src {image_to_interpolate} --out {left_hemi_output_path_mgz} --hemi lh --mni152reg')
+        os.system('mri_vol2surf --src %s --out %s --hemi rh --mni152reg' % (image_to_interpolate, right_hemi_output_path_gifti))
+        os.system('mri_vol2surf --src %s --out %s --hemi lh --mni152reg' % (image_to_interpolate, left_hemi_output_path_gifti))
+        os.system('mri_vol2surf --src %s --out %s --hemi rh --mni152reg' % (image_to_interpolate, right_hemi_output_path_mgz))
+        os.system('mri_vol2surf --src %s --out %s --hemi lh --mni152reg' % (image_to_interpolate, left_hemi_output_path_mgz))
         
     # Otherwise we need to do a nonlinear warp to the volume that is the base 
     # of the target surface
@@ -85,30 +85,41 @@ def map_vol2surf(image_to_interpolate, template_to_interpolate, output_path, fro
             
         # Create a folder for intermediate files 
         intermediate_files = os.path.join(output_path, 'intermediate_folders')
-        os.system(f'mkdir {intermediate_files}')
+        os.system('mkdir %s' % intermediate_files)
         
         # Get some paths for non-linear registration and run it 
         target = os.path.join(recon_all_folder, 'mri', 'T1.mgz')
         output_stem_name = os.path.join(intermediate_files, 'volume2orig')
-        #os.system(f'antsRegistrationSyNQuick.sh -d 3 -f {target} -m {template_to_interpolate} -o {output_stem_name} -n 6')
+        os.system('antsRegistrationSyN.sh -d 3 -f %s -m %s -o %s -n 6' % (target, template_to_interpolate, output_stem_name))
         warp_matrix = output_stem_name + '1Warp.nii.gz'
         linear_matrix = output_stem_name + '0GenericAffine.mat'
        
         # Apply warp to the image 
         final_warped_image = output_stem_name + '_finalInterpolatedImage.nii.gz'
-        os.system(f'antsApplyTransforms -e {image_type} -i {image_to_interpolate} -r {target} -t {warp_matrix} -t {linear_matrix} -o {final_warped_image}')
+        os.system('antsApplyTransforms -e %s -i %s -r %s -t %s -t %s -o %s' % (image_type, image_to_interpolate,
+                                                                                target, warp_matrix, linear_matrix,
+                                                                                final_warped_image))
                 
         # Create a register.dat from the FSL identity matrix
         fsl_identity_matrix = os.path.join(os.popen('echo $FSLDIR').read().strip(), 'etc', 'flirtsch', 'ident.mat')
         registerdat_path = os.path.join(intermediate_files, 'register.dat')
-        os.system(f'tkregister2 --mov {final_warped_image} --fsl {fsl_identity_matrix} --targ {final_warped_image} --noedit --reg {registerdat_path}')
+        os.system('tkregister2 --mov %s --fsl %s --targ %s --noedit --reg %s' % (final_warped_image, fsl_identity_matrix,
+                                                                                 final_warped_image, registerdat_path))
         
         # Create the final surface maps 
         subject_dir = os.path.dirname(recon_all_folder)
         subject_name = os.path.basename(recon_all_folder)     
-        os.system(f'mri_vol2surf --mov {final_warped_image} --ref {final_warped_image} --reg {registerdat_path} --sd {subject_dir} --srcsubject {subject_name} --hemi rh --o {right_hemi_output_path_gifti}')
-        os.system(f'mri_vol2surf --mov {final_warped_image} --ref {final_warped_image} --reg {registerdat_path} --sd {subject_dir} --srcsubject {subject_name} --hemi lh --o {left_hemi_output_path_gifti}')
-        os.system(f'mri_vol2surf --mov {final_warped_image} --ref {final_warped_image} --reg {registerdat_path} --sd {subject_dir} --srcsubject {subject_name} --hemi rh --o {right_hemi_output_path_mgz}')
-        os.system(f'mri_vol2surf --mov {final_warped_image} --ref {final_warped_image} --reg {registerdat_path} --sd {subject_dir} --srcsubject {subject_name} --hemi lh --o {left_hemi_output_path_mgz}')       
-
+        os.system('mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi rh --o %s' % (final_warped_image, final_warped_image, 
+                                                                                                        registerdat_path, subject_dir,
+                                                                                                        subject_name, right_hemi_output_path_gifti))
+        os.system('mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi lh --o %s' % (final_warped_image, final_warped_image,
+                                                                                                        registerdat_path, subject_dir,
+                                                                                                        subject_name, left_hemi_output_path_gifti))
+        os.system('mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi rh --o %s' % (final_warped_image, final_warped_image, 
+                                                                                                        registerdat_path, subject_dir,
+                                                                                                        subject_name, right_hemi_output_path_mgz))
+        os.system('mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi lh --o %s' % (final_warped_image, final_warped_image,
+                                                                                                        registerdat_path, subject_dir,
+                                                                                                        subject_name, left_hemi_output_path_mgz))
+   
     return (left_hemi_output_path_gifti, right_hemi_output_path_gifti, left_hemi_output_path_mgz, right_hemi_output_path_mgz)
