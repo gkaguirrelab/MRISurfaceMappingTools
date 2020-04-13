@@ -12,7 +12,7 @@ def map_gifti2cifti(gifti_left, gifti_right, standard_mesh_atlases_folder, tr, o
     gifti_right_loaded = nb.load(gifti_right)
     
     # Load the dtseries template 
-    dtseries_template = nb.load(os.path.join(standard_mesh_atlases_folder, 'dtseries_atlas_FSLR32k', 'cifti_Atlas.dtseries.nii'))
+    dtseries_template = nb.load(os.path.join(standard_mesh_atlases_folder, 'dtseries_atlas_FSLR32k', 'template32kfslr.dtseries.nii'))
     header = dtseries_template.header.copy()
     filemap = dtseries_template.file_map
     
