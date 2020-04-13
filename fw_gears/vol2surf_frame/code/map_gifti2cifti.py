@@ -6,6 +6,8 @@ def map_gifti2cifti(gifti_left, gifti_right, standard_mesh_atlases_folder, tr, o
  
     # Create a subfolder for cifti
     main_output_folder = os.path.join(output_path, 'cifti')
+    if not os.path.exists(main_output_folder):
+        os.system('mkdir %s' % main_output_folder)
     
     # Load left and right hemispheres
     gifti_left_loaded = nb.load(gifti_left)

@@ -1,0 +1,95 @@
+#!/usr/bin/python3
+
+import os, json
+import nibabel as nb
+import numpy as np
+from map_fs2gifti import map_fs2gifti
+from map_gifti2cifti import map_gifti2cifti
+from map_vol2surf import map_vol2surf
+from locate_file import locate_file
+
+###################### Define the Paths and parameters ###########################
+
+# Set paths and create some folders
+flywheel_base ='/flywheel/v0/'
+first_output_dir = '/firstOutput'
+final_output_dir = os.path.join(flywheel_base, 'output')
+manifest_file = os.path.join(flywheel_base, 'manifest.json')
+config_path = os.path.join(flywheel_base, 'config.json')
+os.system('mkdir %s'%first_output_dir)
+
+################### Parse config ##############################################
+
+with open(config_path) as config_file:
+    job_config = json.load(config_file)
+config = job_config['config']
+
+imageName = config['imageName']
+imageType = config['imageType']
+MNItoFsaverage = config['MNItoFsaverage']
+TR = config['TR']
+volumeToCustomFreesurferSurface = config['volumetricToCustomFreesurferSurface']
+
+################### Set path to input ##############################
+inputImage_path = os.path.join(flywheel_base, 'input/inputImage/')
+inputTemplate_path = os.path.join(flywheel_base, 'input/inputTemplate_path/')
+zippedReconAll_path = os.path.join(flywheel_base, 'input/zippedReconAll/')
+zippedHCPStructure_path = os.path.join(flywheel_base, 'input/zippedHCPStructure/')
+freesurfer_subject_dir = '/freesurfer/subjects' 
+
+inputImage = os.path.join(inputImage_path, os.listdir(inputImage_path)[0])
+if os.path.splitext(inputImage)[1] == 'zip':
+    unzipped_file_path = os.path.join('/opt', 'unzipped_files')
+    os.system('unzip -q %s -d %s'%(inputImage, unzipped_file_path))
+    inputImage = locate_file(imageName, unzipped_file_path)
+
+if os.path.exists(inputTemplate_path):
+    inputTemplate = os.path.join(inputTemplate_path, os.listdir(inputTemplate_path)[0])
+else:
+    inputTemplate = 'NA'
+    
+if os.path.exists(zippedReconAll_path):
+    zippedReconAll = os.path.join(zippedReconAll_path, os.listdir(zippedReconAll_path)[0])
+    unzipped_recon_all = os.path.join(freesurfer_subject_dir, 'unzipped_recon_all')
+    os.system('unzip -q %s -d %s'%(zippedReconAll, unzipped_recon_all))
+else:
+    unzipped_recon_all = 'NA'
+
+if os.path.exists(zippedHCPStructure_path):
+    zippedHCPStructure = os.path.join(zippedHCPStructure_path, os.listdir(zippedHCPStructure_path)[0]) # Not implemented
+    unzipped_hcp = os.path.join('/opt', 'unzipped_recon_all')
+    os.system('unzip -q %s -d %s'%(zippedHCPStructure, unzipped_hcp))
+else:
+    zippedHCPStructure = 'NA'
+  
+standard_mesh_path = '/standard_mesh_atlases'
+standard_meshes = '/tmp/standard_mesh_atlases'
+dtseries_atlas = '/tmp/dtseries_atlas_FSLR32k'
+os.system('unzip -q %s -d /tmp; mv %s %s' % (standard_mesh_path, dtseries_atlas,
+                                             standard_meshes))
+
+################### Run Algorithm ################################
+
+image = nb.load(inputImage)
+image_type = str(type(image))[16:21]
+
+if image_type == 'nifti':
+    left_intgifti, right_intgifti, left_mgz, right_mgz = map_vol2surf(inputImage, 
+                                                                      inputTemplate, 
+                                                                      first_output_dir, 
+                                                                      freesurfer_subject_dir,
+                                                                      from_mni_to_fsaverage=MNItoFsaverage, 
+                                                                      recon_all_folder=unzipped_recon_all)
+    
+    final_gifti_left, final_gifti_right = map_fs2gifti(left_intgifti, right_intgifti, 
+                                                        standard_meshes, first_output_dir, 
+                                                        resolution='32k')
+      
+    final_dtseries = map_gifti2cifti(final_gifti_left, final_gifti_left, 
+                                      standard_meshes, TR, first_output_dir)   
+else:
+    raise RuntimeError('The image you have is not a nifti image. Currently, only volumetric to surface mapping is supported')
+
+################## Zip everything and output ##################################
+
+os.system('cd %s; zip -r -q %s *' % (first_output_dir, os.path.join(final_output_dir, 'surface.zip')))

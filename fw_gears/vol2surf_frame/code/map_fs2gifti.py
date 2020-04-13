@@ -19,6 +19,8 @@ def map_fs2gifti(fs_gifti_left, fs_gifti_right, standard_mesh_atlases_folder, ou
     
     # Create a subfolder for gifti
     main_output_folder = os.path.join(output_path, 'gifti')
+    if not os.path.exists(main_output_folder):
+        os.system('mkdir %s' % main_output_folder)
     
     # Set paths to the files required for the operations 
     current_sphere_left = os.path.join(standard_mesh_atlases_folder, 'resample_fsaverage',
