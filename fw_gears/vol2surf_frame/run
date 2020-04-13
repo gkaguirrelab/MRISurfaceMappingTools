@@ -35,6 +35,7 @@ inputImage_path = os.path.join(flywheel_base, 'input/inputImage/')
 inputTemplate_path = os.path.join(flywheel_base, 'input/inputTemplate_path/')
 zippedReconAll_path = os.path.join(flywheel_base, 'input/zippedReconAll/')
 zippedHCPStructure_path = os.path.join(flywheel_base, 'input/zippedHCPStructure/')
+freesurfer_subject_dir = '/freesurfer/subjects' 
 
 inputImage = os.path.join(inputImage_path, os.listdir(inputImage_path)[0])
 if os.path.splitext(inputImage)[1] == 'zip':
@@ -49,7 +50,7 @@ else:
     
 if os.path.exists(zippedReconAll_path):
     zippedReconAll = os.path.join(zippedReconAll_path, os.listdir(zippedReconAll_path)[0])
-    unzipped_recon_all = os.path.join('/opt', 'unzipped_recon_all')
+    unzipped_recon_all = os.path.join(freesurfer_subject_dir, 'unzipped_recon_all')
     os.system('unzip -q %s -d %s'%(zippedReconAll, unzipped_recon_all))
 else:
     unzipped_recon_all = 'NA'
@@ -60,10 +61,12 @@ if os.path.exists(zippedHCPStructure_path):
     os.system('unzip -q %s -d %s'%(zippedHCPStructure, unzipped_hcp))
 else:
     zippedHCPStructure = 'NA'
-    
+  
 standard_mesh_path = '/standard_mesh_atlases'
 standard_meshes = '/tmp/standard_mesh_atlases'
-os.system('unzip -q %s -d %s' % (standard_mesh_path, standard_meshes))
+dtseries_atlas = '/tmp/dtseries_atlas_FSLR32k'
+os.system('unzip -q %s -d /tmp; mv %s %s' % (standard_mesh_path, dtseries_atlas,
+                                             standard_meshes))
 
 ################### Run Algorithm ################################
 
@@ -74,18 +77,19 @@ if image_type == 'nifti':
     left_intgifti, right_intgifti, left_mgz, right_mgz = map_vol2surf(inputImage, 
                                                                       inputTemplate, 
                                                                       first_output_dir, 
+                                                                      freesurfer_subject_dir,
                                                                       from_mni_to_fsaverage=MNItoFsaverage, 
                                                                       recon_all_folder=unzipped_recon_all)
     
     final_gifti_left, final_gifti_right = map_fs2gifti(left_intgifti, right_intgifti, 
-                                                       standard_meshes, first_output_dir, 
-                                                       resolution='32k')
+                                                        standard_meshes, first_output_dir, 
+                                                        resolution='32k')
       
     final_dtseries = map_gifti2cifti(final_gifti_left, final_gifti_left, 
-                                     standard_meshes, TR, first_output_dir)   
+                                      standard_meshes, TR, first_output_dir)   
 else:
     raise RuntimeError('The image you have is not a nifti image. Currently, only volumetric to surface mapping is supported')
 
 ################## Zip everything and output ##################################
 
-os.system('cd %s; zip -q %s *' % (first_output_dir, os.path.join(final_output_dir, 'surface.zip')))
+os.system('cd %s; zip -r -q %s *' % (first_output_dir, os.path.join(final_output_dir, 'surface.zip')))
