@@ -23,8 +23,15 @@ RUN apt-get update \
     ants \
     connectome-workbench
 
-# Install MCR on call
+# Install the required python packages
 RUN pip3 install numpy nibabel==3.0.1
+
+# Download and install Freesurfer on call
+RUN wget https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.0/freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz
+RUN mkdir freesurfer
+RUN tar -zxf freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz 
+COPY license.txt /freesurfer/license.txt
+ENV FREESURFER_HOME /freesurfer
 
 # Set the entrypoint  
 ENTRYPOINT /flywheel/v0/run
