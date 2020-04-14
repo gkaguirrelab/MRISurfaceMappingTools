@@ -26,9 +26,8 @@ config = job_config['config']
 
 imageName = config['imageName']
 imageType = config['imageType']
-MNItoFsaverage = config['MNItoFsaverage']
+inputIsInMNI152 = config['inputIsInMNI152']
 TR = config['TR']
-volumeToCustomFreesurferSurface = config['volumetricToCustomFreesurferSurface']
 
 ################### Set path to input ##############################
 inputImage_path = os.path.join(flywheel_base, 'input/inputImage/')
@@ -53,7 +52,7 @@ if os.path.exists(zippedReconAll_path):
     unzipped_recon_all = os.path.join(freesurfer_subject_dir, 'unzipped_recon_all')
     os.system('unzip -q %s -d %s'%(zippedReconAll, unzipped_recon_all))
 else:
-    unzipped_recon_all = 'NA'
+    unzipped_recon_all = '/freesurfer/subjects/fsaverage'
 
 if os.path.exists(zippedHCPStructure_path):
     zippedHCPStructure = os.path.join(zippedHCPStructure_path, os.listdir(zippedHCPStructure_path)[0]) # Not implemented
@@ -70,23 +69,37 @@ os.system('unzip -q %s -d /tmp; mv %s %s' % (standard_mesh_path, dtseries_atlas,
 
 ################### Run Algorithm ################################
 
+# Get the image type
 image = nb.load(inputImage)
 image_type = str(type(image))[16:21]
 
 if image_type == 'nifti':
-    left_intgifti, right_intgifti, left_mgz, right_mgz = map_vol2surf(inputImage, 
-                                                                      inputTemplate, 
-                                                                      first_output_dir, 
-                                                                      freesurfer_subject_dir,
-                                                                      from_mni_to_fsaverage=MNItoFsaverage, 
-                                                                      recon_all_folder=unzipped_recon_all)
+   
+    if unzipped_recon_all == '/freesurfer/subjects/fsaverage':   
+        left_intgifti, right_intgifti, left_mgz, right_mgz = map_vol2surf(inputImage, 
+                                                                          inputTemplate, 
+                                                                          first_output_dir, 
+                                                                          unzipped_recon_all,
+                                                                          from_mni_to_fsaverage=inputIsInMNI152, 
+                                                                          recon_all_folder=unzipped_recon_all)
+       
+        final_gifti_left, final_gifti_right = map_fs2gifti(left_intgifti, right_intgifti, 
+                                                           standard_meshes, first_output_dir, 
+                                                           resolution='32k')
+              
+        final_dtseries = map_gifti2cifti(final_gifti_left, final_gifti_left, 
+                                         standard_meshes, TR, first_output_dir)
+
     
-    final_gifti_left, final_gifti_right = map_fs2gifti(left_intgifti, right_intgifti, 
-                                                        standard_meshes, first_output_dir, 
-                                                        resolution='32k')
-      
-    final_dtseries = map_gifti2cifti(final_gifti_left, final_gifti_left, 
-                                      standard_meshes, TR, first_output_dir)   
+    if unzipped_recon_all != 'NA': # Use fsaverage if recon-all not specified 
+            left_intgifti, right_intgifti, left_mgz, right_mgz = map_vol2surf(inputImage, 
+                                                                              inputTemplate, 
+                                                                              first_output_dir, 
+                                                                              unzipped_recon_all,
+                                                                              from_mni_to_fsaverage=False, 
+                                                                              recon_all_folder=unzipped_recon_all)    
+    
+   
 else:
     raise RuntimeError('The image you have is not a nifti image. Currently, only volumetric to surface mapping is supported')
 

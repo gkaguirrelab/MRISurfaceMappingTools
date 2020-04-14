@@ -6,7 +6,7 @@
 	"maintainer": "Ozenc Taskin <huseyinozenc.taskin@pennmedicine.upenn.edu>",
 	"source": "https://github.com/gkaguirrelab/MRISurfaceMappingTools",
 	"url": "https://github.com/gkaguirrelab/MRISurfaceMappingTools/fw_gears",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"custom": {
 		"flywheel": {
 			"suite": "GKAguirreLab"
@@ -19,7 +19,7 @@
   			"description": "Name of the image you want to process in a zip or tar archive. This is implemented so that fmriprep, hcp, or any other zip output can be used as input. If your input is a single image and not an archive, enter NA here. Otherwise put the name of the image in your archive you want to process. The image can be anywhere in your zip archive. This gear will find it. But make sure that you do not have two different images with the same name in your archive.",
   			"type": "string"
 		},
-		"MNItoFsaverage":  {
+		"inputIsInMNI152":  {
             "default": false,
   			"description": "Enable this if your input is a volume in the MNI152 space and you want to map to standard fsaverage. Increases processing speed",
   			"type": "boolean"
@@ -27,11 +27,6 @@
 		"TR":  {
   			"description": "TR of the input image is required to make the cifti maps.",
   			"type": "number"
-		},
-		"volumetricToCustomFreesurferSurface":  {
-			"default": false,
-  			"description": "Enable this if your input is a volume and you want to map to a custom recon-all surface rather than fsaverage. You need to provide a zipped recon-all structure for this. See the inputs section. Currently, if you do this you cannot get gifti and cifti maps since native hemisphere mapping is not yet implemented",
-  			"type": "boolean"
 		},
 		"imageType": {
             "default": "volumetric",
