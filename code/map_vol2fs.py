@@ -1,7 +1,7 @@
 import os 
 import nibabel as nb
 
-def map_vol2surf(image_to_interpolate, template_to_interpolate, output_path, from_mni_to_fsaverage=True, recon_all_folder='NA'):
+def map_vol2fs(image_to_interpolate, template_to_interpolate, output_path, from_mni_to_fsaverage=True, recon_all_folder='NA'):
     
     '''
     Maps volume image to freesurfer fsaverage or a custom surface
