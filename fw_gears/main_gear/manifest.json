@@ -2,7 +2,7 @@
 	"name": "vol2surf",
 	"label": "vol2surf: Map volumetric MRI images to fsaverage and FSLR surfaces",
 	"description": "This gear maps volumetric brain images to surfaces. With this tool any volumetric image (statistical map or whole bold timeseries) can be mapped to any freesurfer surface (native or fsaverage). However, mapping to native gifti/cifti space is not currently implemented, therefore, images can only be mapped to FSLR32k gifti/cifti.",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"inputs": {
 		"inputImage": {
 			"base": "file",
@@ -36,11 +36,6 @@
 		}
 	},
 	"config": {
-		"inputIsInMNI152": {
-			"default": false,
-			"description": "Enable this if your input is a volume in the MNI152 space and you want to map to standard fsaverage. Increases processing speed",
-			"type": "boolean"
-		},
 		"TR": {
 			"description": "TR of the input image is required to make the cifti maps.",
 			"type": "number"
@@ -59,6 +54,11 @@
 				"gifti-surface"
 			],
 			"type": "string"
+		},
+		"inputIsInMNI152": {
+			"default": false,
+			"description": "Enable this if your input is a volume in the MNI152 space and you want to map to standard fsaverage. Increases processing speed",
+			"type": "boolean"
 		}
 	},
 	"author": "Ozenc Taskin",
@@ -67,12 +67,12 @@
 	"source": "https://github.com/gkaguirrelab/MRISurfaceMappingTools",
 	"url": "https://github.com/gkaguirrelab/MRISurfaceMappingTools/fw_gears",
 	"custom": {
-		"flywheel":{
+		"flywheel": {
 			"suite": "GKAguirreLab"
 		},
 		"gear-builder": {
 			"category": "analysis",
-			"image": "gkaguirrelab/mrisurfacemappingtools:0.1.0"
+			"image": "gkaguirrelab/mrisurfacemappingtools:0.1.1"
 		}
 	}
 }

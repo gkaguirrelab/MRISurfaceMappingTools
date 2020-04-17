@@ -12,19 +12,29 @@ COPY code/* ${FLYWHEEL}
 COPY standard_mesh_atlases.zip /standard_mesh_atlases.zip
 RUN chmod +x /flywheel/v0/*
 
-# Install required packages    
+
+# Install required packages     
 RUN apt-get update \
     && apt-get install -y \
+    software-properties-common
+RUN add-apt-repository ppa:deadsnakes/ppa
+RUN apt-get update
+RUN apt-get install -y \
     wget \
-    python3 \
-    python3-pip \
     zip \
     unzip \
+    fsl-core \
     ants \
     connectome-workbench
 
+# Install Anaconda
+RUN wget https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh
+RUN bash Anaconda3-2020.02-Linux-x86_64.sh -b
+ENV PATH=$PATH:/root/anaconda3/bin
+
 # Install the required python packages
-RUN pip3 install numpy nibabel==3.0.1
+RUN pip install --upgrade pip
+RUN pip install numpy nibabel==3.0.1 nilearn scikit-learn matplotlib pandas scipy hcp-utils ciftify
 
 # Download and install Freesurfer on call
 RUN wget https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.0/freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz
