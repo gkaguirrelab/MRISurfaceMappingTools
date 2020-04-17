@@ -30,6 +30,7 @@ config = job_config['config']
 imageName = config['imageName']
 imageType = config['imageType']
 inputIsInMNI152 = config['inputIsInMNI152']
+ciftify = config['ciftify']
 TR = config['TR']
 
 ################### Set path to input ##############################
@@ -68,7 +69,7 @@ standard_mesh_path = '/standard_mesh_atlases'
 standard_meshes = '/tmp/standard_mesh_atlases'
 dtseries_atlas = '/tmp/dtseries_atlas_FSLR32k'
 os.system('unzip -q %s -d /tmp; mv %s %s' % (standard_mesh_path, dtseries_atlas,
-                                             standard_meshes))
+                                              standard_meshes))
 
 ################### Run Algorithm ################################
 
@@ -84,14 +85,14 @@ if image_type == 'nifti':
                                                                         first_output_dir, 
                                                                         freesurfer_subject_dir,
                                                                         from_mni_to_fsaverage=inputIsInMNI152, 
-                                                                        recon_all_folder=unzipped_recon_all)
+                                                                        recon_all_folder='NA')
        
         final_gifti_left, final_gifti_right = map_fs2gifti(left_intgifti, right_intgifti, 
-                                                           standard_meshes, first_output_dir, 
-                                                           resolution='32k')
+                                                            standard_meshes, first_output_dir, 
+                                                            resolution='32k')
               
         final_dtseries = map_gifti2cifti(final_gifti_left, final_gifti_left, 
-                                         standard_meshes, TR, first_output_dir)
+                                          standard_meshes, TR, first_output_dir)
 
     
     else:
@@ -102,10 +103,22 @@ if image_type == 'nifti':
                                                                         from_mni_to_fsaverage=False, 
                                                                         recon_all_folder=unzipped_recon_all)    
     
-   
+elif image_type == 'gifti':
+        
+    final_dtseries = map_gifti2cifti(final_gifti_left, final_gifti_left, 
+                                      standard_meshes, TR, first_output_dir)    
+  
 else:
     raise RuntimeError('The image you have is not a nifti image. Currently, only volumetric to surface mapping is supported')
 
+# if ciftify:
+#     os.system('pip install ciftify')
+#     if unzipped_recon_all != '/freesurfer/subjects/fsaverage':   
+#         hcp_folder = '/tmp/hcp_workdir'
+#         os.system('mkdir %s' % hcp_folder)
+#         os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;ciftify_recon_all --ciftify-work-dir %s --surf-reg FS --resample-to-T1w32k %s -v' % (freesurfer_subject_dir, hcp_folder, unzipped_recon_all))
+#     else:
+#         raise RuntimeError('You are using the fsaverage surface as template. You cannot ciftify this.')                                                                                                                                                                                                                                        
 ########################### Plot new maps #####################################
 
 # Empty folder for images
@@ -190,12 +203,12 @@ html_content = '''
 <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Left_medial">
 <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Right_medial">
 <p style="clear: both;">   
-''' % ('images/med_gifti_left.png', 'images/med_gifti_right.png', 'images/lat_gifti_left.png', 'images/lat_gifti_left.png',
-       'images/med_FS_left.png', 'images/med_FS_right.png', 'images/lat_FS_left.png', 'images/lat_FS_right.png')
+''' % ('images/med_gifti_left.png', 'images/med_gifti_right.png', 'images/lat_gifti_left.png', 'images/lat_gifti_right.png',
+        'images/med_FS_left.png', 'images/med_FS_right.png', 'images/lat_FS_left.png', 'images/lat_FS_right.png')
     
 html_file.write(html_content)
 html_file.close() 
 
 ################## Zip everything and output ##################################
-os.system('cd %s; zip -r -q %s *' % (images_main, os.path.join(final_output_dir, 'results.zip')))
+os.system('cd %s; zip -r -q %s *' % (images_main, os.path.join(final_output_dir, 'results.html.zip')))
 os.system('cd %s; zip -r -q %s *' % (first_output_dir, os.path.join(final_output_dir, 'surface.zip')))
