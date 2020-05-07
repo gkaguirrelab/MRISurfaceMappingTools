@@ -1,7 +1,7 @@
 import os 
 import nibabel as nb
 
-def map_vol2fs(image_to_interpolate, template_to_interpolate, output_path, from_mni_to_fsaverage=True, recon_all_folder='NA'):
+def map_vol2fs(image_to_interpolate, template_to_interpolate, output_path, freesurfer_subjects_dir, recon_all_folder, input_is_MNI=True, custom_recon_all=False):
     
     '''
     Maps volume image to freesurfer fsaverage or a custom surface
@@ -20,6 +20,7 @@ def map_vol2fs(image_to_interpolate, template_to_interpolate, output_path, from_
         - recon_all_folder = Set this to a freesurfer recon-all folder. This
         is the target of the surface mapping. If you want to map to fsaverage
         set this to freesurfer-dir/subjects/fsaverage?
+        - freesurfer subject dir - The folder containing all the freesurfer subjects
     
     Outputs:
         The main output folder contains the final left/right surface images and
@@ -69,20 +70,16 @@ def map_vol2fs(image_to_interpolate, template_to_interpolate, output_path, from_
     left_hemi_output_path_mgz = os.path.join(main_output_folder, image_name + '-lh.mgz')   
     
     # If interpolating from mni to fsaverage, life is easy    
-    if from_mni_to_fsaverage:
-        if recon_all_folder != 'NA':
-            print('Warning: You specified a recon all folder but also using the from_mni_to_fsaverage option. Assuming that you are using the MNI template and interpolating to fsaverage. Revise the flags if this is not what you want')    
-        os.system('mri_vol2surf --src %s --out %s --hemi rh --mni152reg' % (image_to_interpolate, right_hemi_output_path_gifti))
-        os.system('mri_vol2surf --src %s --out %s --hemi lh --mni152reg' % (image_to_interpolate, left_hemi_output_path_gifti))
-        os.system('mri_vol2surf --src %s --out %s --hemi rh --mni152reg' % (image_to_interpolate, right_hemi_output_path_mgz))
-        os.system('mri_vol2surf --src %s --out %s --hemi lh --mni152reg' % (image_to_interpolate, left_hemi_output_path_mgz))
+    if input_is_MNI and custom_recon_all==False:
+        os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --src %s --out %s --hemi rh --mni152reg' % (freesurfer_subjects_dir, image_to_interpolate, right_hemi_output_path_gifti))
+        os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --src %s --out %s --hemi lh --mni152reg' % (freesurfer_subjects_dir, image_to_interpolate, left_hemi_output_path_gifti))
+        os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --src %s --out %s --hemi rh --mni152reg' % (freesurfer_subjects_dir, image_to_interpolate, right_hemi_output_path_mgz))
+        os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --src %s --out %s --hemi lh --mni152reg' % (freesurfer_subjects_dir, image_to_interpolate, left_hemi_output_path_mgz))
         
     # Otherwise we need to do a nonlinear warp to the volume that is the base 
     # of the target surface
-    if not from_mni_to_fsaverage:
-        if recon_all_folder == 'NA':
-            raise RuntimeError('You have not specified a recon all folder') 
-            
+    if custom_recon_all==True:
+ 
         # Create a folder for intermediate files 
         intermediate_files = os.path.join(output_path, 'intermediate_folders')
         os.system('mkdir %s' % intermediate_files)
@@ -90,36 +87,36 @@ def map_vol2fs(image_to_interpolate, template_to_interpolate, output_path, from_
         # Get some paths for non-linear registration and run it 
         target = os.path.join(recon_all_folder, 'mri', 'T1.mgz')
         output_stem_name = os.path.join(intermediate_files, 'volume2orig')
-        os.system('antsRegistrationSyN.sh -d 3 -f %s -m %s -o %s -n 6' % (target, template_to_interpolate, output_stem_name))
+        os.system('export ANTSPATH=/usr/lib/ants/;export PATH=${ANTSPATH}:$PATH;/usr/lib/ants/antsRegistrationSyN.sh -d 3 -f %s -m %s -o %s -n 6' % (target, template_to_interpolate, output_stem_name))
         warp_matrix = output_stem_name + '1Warp.nii.gz'
         linear_matrix = output_stem_name + '0GenericAffine.mat'
        
         # Apply warp to the image 
         final_warped_image = output_stem_name + '_finalInterpolatedImage.nii.gz'
-        os.system('antsApplyTransforms -e %s -i %s -r %s -t %s -t %s -o %s' % (image_type, image_to_interpolate,
+        os.system('export ANTSPATH=/usr/lib/ants/;export PATH=${ANTSPATH}:$PATH;/usr/lib/ants/antsApplyTransforms -e %s -i %s -r %s -t %s -t %s -o %s' % (image_type, image_to_interpolate,
                                                                                 target, warp_matrix, linear_matrix,
                                                                                 final_warped_image))
                 
         # Create a register.dat from the FSL identity matrix
         fsl_identity_matrix = os.path.join(os.popen('echo $FSLDIR').read().strip(), 'etc', 'flirtsch', 'ident.mat')
         registerdat_path = os.path.join(intermediate_files, 'register.dat')
-        os.system('tkregister2 --mov %s --fsl %s --targ %s --noedit --reg %s' % (final_warped_image, fsl_identity_matrix,
-                                                                                 final_warped_image, registerdat_path))
+        os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/tkregister2 --mov %s --fsl %s --targ %s --noedit --reg %s' % (freesurfer_subjects_dir, final_warped_image, fsl_identity_matrix,
+                                                                                                                                                                                                                                 final_warped_image, registerdat_path))
         
         # Create the final surface maps 
         subject_dir = os.path.dirname(recon_all_folder)
         subject_name = os.path.basename(recon_all_folder)     
-        os.system('mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi rh --o %s' % (final_warped_image, final_warped_image, 
-                                                                                                        registerdat_path, subject_dir,
-                                                                                                        subject_name, right_hemi_output_path_gifti))
-        os.system('mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi lh --o %s' % (final_warped_image, final_warped_image,
-                                                                                                        registerdat_path, subject_dir,
-                                                                                                        subject_name, left_hemi_output_path_gifti))
-        os.system('mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi rh --o %s' % (final_warped_image, final_warped_image, 
-                                                                                                        registerdat_path, subject_dir,
-                                                                                                        subject_name, right_hemi_output_path_mgz))
-        os.system('mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi lh --o %s' % (final_warped_image, final_warped_image,
-                                                                                                        registerdat_path, subject_dir,
-                                                                                                        subject_name, left_hemi_output_path_mgz))
+        os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi rh --o %s' % (freesurfer_subjects_dir, final_warped_image, final_warped_image, 
+                                                                                                                                                                                                                                                        registerdat_path, subject_dir,
+                                                                                                                                                                                                                                                        subject_name, right_hemi_output_path_gifti))
+        os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi lh --o %s' % (freesurfer_subjects_dir, final_warped_image, final_warped_image,
+                                                                                                                                                                                                                                                        registerdat_path, subject_dir,
+                                                                                                                                                                                                                                                        subject_name, left_hemi_output_path_gifti))
+        os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi rh --o %s' % (freesurfer_subjects_dir, final_warped_image, final_warped_image, 
+                                                                                                                                                                                                                                                        registerdat_path, subject_dir,
+                                                                                                                                                                                                                                                        subject_name, right_hemi_output_path_mgz))
+        os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi lh --o %s' % (freesurfer_subjects_dir, final_warped_image, final_warped_image,
+                                                                                                                                                                                                                                                        registerdat_path, subject_dir,
+                                                                                                                                                                                                                                                        subject_name, left_hemi_output_path_mgz))
    
     return (left_hemi_output_path_gifti, right_hemi_output_path_gifti, left_hemi_output_path_mgz, right_hemi_output_path_mgz)

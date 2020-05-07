@@ -1,7 +1,7 @@
 import os 
 import nibabel as nb
 
-def map_vol2fs(image_to_interpolate, template_to_interpolate, output_path, freesurfer_subjects_dir, from_mni_to_fsaverage=True, recon_all_folder='NA'):
+def map_vol2fs(image_to_interpolate, template_to_interpolate, output_path, freesurfer_subjects_dir, recon_all_folder, input_is_MNI=True, custom_recon_all=False):
     
     '''
     Maps volume image to freesurfer fsaverage or a custom surface
@@ -20,6 +20,7 @@ def map_vol2fs(image_to_interpolate, template_to_interpolate, output_path, frees
         - recon_all_folder = Set this to a freesurfer recon-all folder. This
         is the target of the surface mapping. If you want to map to fsaverage
         set this to freesurfer-dir/subjects/fsaverage?
+        - freesurfer subject dir - The folder containing all the freesurfer subjects
     
     Outputs:
         The main output folder contains the final left/right surface images and
@@ -69,9 +70,7 @@ def map_vol2fs(image_to_interpolate, template_to_interpolate, output_path, frees
     left_hemi_output_path_mgz = os.path.join(main_output_folder, image_name + '-lh.mgz')   
     
     # If interpolating from mni to fsaverage, life is easy    
-    if from_mni_to_fsaverage:
-        if recon_all_folder != 'NA':
-            print('Warning: You specified a recon all folder but also using the from_mni_to_fsaverage option. Assuming that you are using the MNI template and interpolating to fsaverage. Revise the flags if this is not what you want')    
+    if input_is_MNI and custom_recon_all==False:
         os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --src %s --out %s --hemi rh --mni152reg' % (freesurfer_subjects_dir, image_to_interpolate, right_hemi_output_path_gifti))
         os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --src %s --out %s --hemi lh --mni152reg' % (freesurfer_subjects_dir, image_to_interpolate, left_hemi_output_path_gifti))
         os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --src %s --out %s --hemi rh --mni152reg' % (freesurfer_subjects_dir, image_to_interpolate, right_hemi_output_path_mgz))
@@ -79,10 +78,8 @@ def map_vol2fs(image_to_interpolate, template_to_interpolate, output_path, frees
         
     # Otherwise we need to do a nonlinear warp to the volume that is the base 
     # of the target surface
-    if not from_mni_to_fsaverage:
-        if recon_all_folder == 'NA':
-            raise RuntimeError('You have not specified a recon all folder') 
-            
+    if custom_recon_all==True:
+ 
         # Create a folder for intermediate files 
         intermediate_files = os.path.join(output_path, 'intermediate_folders')
         os.system('mkdir %s' % intermediate_files)
