@@ -1,6 +1,7 @@
-#!/root/anaconda3/bin/python3
+#!/anaconda3/bin/python3
 
 import os, json, nilearn
+import neuropythy as ny
 import nibabel as nb
 import numpy as np
 import matplotlib.pyplot as plt
@@ -31,7 +32,7 @@ imageName = config['imageName']
 registerToCustomSurface = config['registerToCustomSurface']
 saveCiftifyStructure = config['saveCiftifyStructure']
 inputIsAlreadyInMNI152 = config['inputIsAlreadyInMNI152']
-outputDiagnosticForAllTasks = config['outputDiagnosticForAll']
+outputDiagnosticForAllTasks = config['outputDiagnosticForAllTasks']
 
 ################### Set path to input ##############################
 
@@ -43,7 +44,8 @@ zippedReconAll_path = os.path.join(flywheel_base, 'input/zippedReconAll/')
 inputImageOrArchive = os.path.join(inputImageOrArchive_path, os.listdir(inputImageOrArchive_path)[0])
 inputImage = []
 # Single image case
-if os.path.splitext(inputImageOrArchive)[1] == 'gz' or os.path.splitext(inputImageOrArchive)[1] == 'nii':
+print(os.path.splitext(inputImageOrArchive)[1])
+if os.path.splitext(inputImageOrArchive)[1] == '.gz' or os.path.splitext(inputImageOrArchive)[1] == 'nii':
     inputImage.append(inputImageOrArchive)
 # Input is archive
 elif os.path.splitext(inputImageOrArchive)[1] == 'zip':
@@ -93,6 +95,7 @@ for i in inputImage:
     image_type = str(type(image))[16:21]
     
     if image_type == 'nifti': 
+        print('***************** MAPPING VOLUME TO FSAVERAGE ******************')
         left_intgifti, right_intgifti, left_mgz, right_mgz = map_vol2fs(i, 
                                                                         inputTemplate, 
                                                                         first_output_dir, 
@@ -101,20 +104,23 @@ for i in inputImage:
                                                                         input_is_MNI=inputIsAlreadyInMNI152, 
                                                                         custom_recon_all=registerToCustomSurface)  
         if not registerToCustomSurface:
+            print('************* MAKING GIFTI IMAGES ***************************')
             final_gifti_left, final_gifti_right = map_fs2gifti(left_intgifti, right_intgifti, 
-                                                               standard_meshes, first_output_dir, 
-                                                               resolution='32k')
+                                                                standard_meshes, first_output_dir, 
+                                                                resolution='32k')
             # Create a ciftify directory and call ciftify
+            print('************* RUNNING CIFTIFY *******************************')
             ciftify_work_dir = '/hcp_dir'
             os.system('mkdir %s' % ciftify_work_dir)
-            ciftify_recon_run = '''ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s 
+            ciftify_recon_run = '''export PATH="/anaconda3/bin:$PATH";ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s 
             --surf-reg FS --fs-license /freesurfer/license.txt --n_cpus 2 --verbose mysubject''' % (ciftify_work_dir, freesurfer_subject_dir)
             os.system(ciftify_recon_run)
-            ciftify_dtseries_run = '''ciftify_subject_fmri --ciftify-work-dir %s --surf-reg FS
+            print('************* MAKING CIFTI IMAGES ***************************')
+            ciftify_dtseries_run = '''export PATH="/anaconda3/bin:$PATH";ciftify_subject_fmri --ciftify-work-dir %s --surf-reg FS
             --already-in-MNI=True --n_cpus 2 --verbose %s mysubject %s''' % (ciftify_work_dir, i, task_name)
             os.system(ciftify_dtseries_run)
-            ciftify_visualization_command = '''cifti_vis_fmri subject --ciftify-work-dir %s %s mysubject''' % (ciftify_work_dir,
-                                                                                                               task_name)
+            ciftify_visualization_command = '''export PATH="/anaconda3/bin:$PATH";cifti_vis_fmri subject --ciftify-work-dir %s %s mysubject''' % (ciftify_work_dir,
+                                                                                                                                                  task_name)
 ########################### Plot new maps ####################################
     #### This is still in the loop and registerToCustomSurface condition ####
             # Empty folder for images
@@ -226,9 +232,9 @@ for i in inputImage:
             <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="insula corr">
             <p style="clear: both;">   
             ''' % ('images/med_gifti_left.png', 'images/med_gifti_right.png', 'images/lat_gifti_left.png', 'images/lat_gifti_left.png',
-                   'images/med_FS_left.png', 'images/med_FS_right.png', 'images/lat_FS_left.png', 'images/lat_FS_right.png', 
-                   'images/PialRegCor.png', 'images/PialRegAx.png', 'images/PialRegSag.png', 'images/fmri_Subcortical.png',
-                   'images/fmri_LM.png', 'images/fmri_DV.png', 'images/DAN_conn.png', 'images/DMN_conn.png', 'images/SAL_conn.png')
+                    'images/med_FS_left.png', 'images/med_FS_right.png', 'images/lat_FS_left.png', 'images/lat_FS_right.png', 
+                    'images/PialRegCor.png', 'images/PialRegAx.png', 'images/PialRegSag.png', 'images/fmri_Subcortical.png',
+                    'images/fmri_LM.png', 'images/fmri_DV.png', 'images/DAN_conn.png', 'images/DMN_conn.png', 'images/SAL_conn.png')
                 
             html_file.write(html_content)
             html_file.close() 
