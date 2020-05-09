@@ -10,6 +10,7 @@ RUN mkdir -p ${FLYWHEEL}
 COPY manifest.json run ${FLYWHEEL}
 COPY locate_file.py map_fs2gifti.py map_vol2fs.py ${FLYWHEEL}
 COPY standard_mesh_atlases.zip /standard_mesh_atlases.zip
+COPY fslinstaller.py /fslinstaller.py
 RUN chmod +x /flywheel/v0/*
 
 # Install required packages     
@@ -22,7 +23,6 @@ RUN apt-get install -y \
     wget \
     zip \
     unzip \
-    fsl-core \
     ants \
     connectome-workbench
 
@@ -31,8 +31,12 @@ RUN wget https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh
 RUN bash Anaconda3-2020.02-Linux-x86_64.sh -b -p /anaconda3
 ENV PATH=$PATH:/anaconda3/bin
 
+# Install python2 for fslinstallation and install the newest verison of fsl
+RUN apt-get install python -y
+RUN python2 /fslinstaller.py -d /fsl 
+
 # Install the required python packages
-RUN pip install numpy nibabel==3.0.1 neuropythy nilearn scikit-learn matplotlib pandas scipy hcp-utils ciftify
+RUN pip install numpy==1.18.1 nibabel==3.0.1 neuropythy nilearn==0.4.0 scikit-learn==0.22.1 matplotlib==0.10.0 pandas==1.14.0 scipy==1.3.2 hcp-utils ciftify==2.3.2.post1
 
 # Download and install Freesurfer on call
 RUN wget https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.0/freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz

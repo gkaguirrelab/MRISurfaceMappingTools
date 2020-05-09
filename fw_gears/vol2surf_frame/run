@@ -21,7 +21,10 @@ manifest_file = os.path.join(flywheel_base, 'manifest.json')
 config_path = os.path.join(flywheel_base, 'config.json')
 freesurfer_subject_dir = '/freesurfer/subjects'
 os.system('mkdir %s'%first_output_dir)
-    
+
+#Install bc
+os.system('apt-get install bc')
+
 ################### Parse config ##############################################
 
 with open(config_path) as config_file:
@@ -44,7 +47,6 @@ zippedReconAll_path = os.path.join(flywheel_base, 'input/zippedReconAll/')
 inputImageOrArchive = os.path.join(inputImageOrArchive_path, os.listdir(inputImageOrArchive_path)[0])
 inputImage = []
 # Single image case
-print(os.path.splitext(inputImageOrArchive)[1])
 if os.path.splitext(inputImageOrArchive)[1] == '.gz' or os.path.splitext(inputImageOrArchive)[1] == 'nii':
     inputImage.append(inputImageOrArchive)
 # Input is archive
@@ -68,69 +70,89 @@ if os.path.exists(registrationTemplate_path):
 else:
     inputTemplate = 'NA'    
 
-## Get the recon-all. If it doesn't exist set it to fsaverage    
+## Get the recon-all.
 if os.path.exists(zippedReconAll_path):
     zippedReconAll = os.path.join(zippedReconAll_path, os.listdir(zippedReconAll_path)[0])
     unzipped_recon_all = os.path.join(zippedReconAll_path, 'unzipped_recon_all')
     os.system('unzip -q %s -d %s'%(zippedReconAll, unzipped_recon_all))
+    subject_name = os.listdir(unzipped_recon_all)[0]
+    os.system('mv %s/* %s/%s' % (unzipped_recon_all, freesurfer_subject_dir, subject_name))
+    unzipped_recon_all = os.path.join(freesurfer_subject_dir, subject_name)
 elif not os.path.exists(zippedReconAll_path) and registerToCustomSurface:
     raise RuntimeError('You need a recon all input for custom surface mappings')
 else:
-    unzipped_recon_all = '/freesurfer/subjects/fsaverage'
-  
+    unzipped_recon_all = os.path.join(freesurfer_subject_dir, 'fsaverage')
+    
 standard_mesh_path = '/standard_mesh_atlases'
 standard_meshes = '/tmp/standard_mesh_atlases'
-os.system('unzip -q %s -d /tmp' % (standard_mesh_path))
+os.system('unzip -q %s -d /tmp' % standard_mesh_path)
 
 ################### Run Algorithm ################################
 for i in inputImage:
+    
     # Get the image name for ciftify folder name 
     name_without_path = os.path.split(i)[1]
     task_name = os.path.splitext(name_without_path)[0]
     if task_name[-3:] == 'nii':
-        task_name = task_name[:-4]
+        task_name = 'task_' + task_name[:-4]
+       
+    # Create the folder structure 
+    main_task_folder = os.path.join(first_output_dir, task_name)
+    freesurfer_surface_folder = os.path.join(first_output_dir, main_task_folder, 'freesurfer164k')
+    gifti_surface_folder = os.path.join(first_output_dir, main_task_folder, 'giftiFSLR_32k')
+    cifti_surface_folder = os.path.join(first_output_dir, main_task_folder, 'cifti')
+    cifti_surface_atlas = os.path.join(cifti_surface_folder, 'FSLR_32k')
+    cifti_surface_native = os.path.join(cifti_surface_folder, 'native')
+    os.system('mkdir %s %s %s %s %s %s' % (main_task_folder, freesurfer_surface_folder, 
+                                           gifti_surface_folder, cifti_surface_folder, 
+                                           cifti_surface_atlas, cifti_surface_native))
           
     # Get the image type
     image = nb.load(i)
     image_type = str(type(image))[16:21]
     
     if image_type == 'nifti': 
-        print('***************** MAPPING VOLUME TO FSAVERAGE ******************')
         left_intgifti, right_intgifti, left_mgz, right_mgz = map_vol2fs(i, 
                                                                         inputTemplate, 
-                                                                        first_output_dir, 
+                                                                        freesurfer_surface_folder, 
                                                                         freesurfer_subject_dir,
                                                                         recon_all_folder = unzipped_recon_all,
                                                                         input_is_MNI=inputIsAlreadyInMNI152, 
                                                                         custom_recon_all=registerToCustomSurface)  
         if not registerToCustomSurface:
-            print('************* MAKING GIFTI IMAGES ***************************')
             final_gifti_left, final_gifti_right = map_fs2gifti(left_intgifti, right_intgifti, 
-                                                                standard_meshes, first_output_dir, 
+                                                                standard_meshes, gifti_surface_folder, 
                                                                 resolution='32k')
             # Create a ciftify directory and call ciftify
-            print('************* RUNNING CIFTIFY *******************************')
-            ciftify_work_dir = '/hcp_dir'
+            ciftify_work_dir = '/hcp_dir/'
             os.system('mkdir %s' % ciftify_work_dir)
-            ciftify_recon_run = '''export PATH="/anaconda3/bin:$PATH";ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s 
-            --surf-reg FS --fs-license /freesurfer/license.txt --n_cpus 2 --verbose mysubject''' % (ciftify_work_dir, freesurfer_subject_dir)
+            ciftify_recon_run = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s --surf-reg FS --fs-license /freesurfer/license.txt --n_cpus 2 --verbose %s' % (ciftify_work_dir, freesurfer_subject_dir, subject_name)
             os.system(ciftify_recon_run)
-            print('************* MAKING CIFTI IMAGES ***************************')
-            ciftify_dtseries_run = '''export PATH="/anaconda3/bin:$PATH";ciftify_subject_fmri --ciftify-work-dir %s --surf-reg FS
-            --already-in-MNI=True --n_cpus 2 --verbose %s mysubject %s''' % (ciftify_work_dir, i, task_name)
+            ciftify_dtseries_run = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_subject_fmri --already-in-MNI --surf-reg FS --ciftify-work-dir %s %s %s %s -v' % (ciftify_work_dir, i, subject_name, task_name)
             os.system(ciftify_dtseries_run)
-            ciftify_visualization_command = '''export PATH="/anaconda3/bin:$PATH";cifti_vis_fmri subject --ciftify-work-dir %s %s mysubject''' % (ciftify_work_dir,
-                                                                                                                                                  task_name)
+            os.system('cp %s %s/' % (os.path.join(ciftify_work_dir, subject_name, 'MNINonLinear', 'Results', task_name, '%s_Atlas_s0.dtseries.nii' % task_name), cifti_surface_atlas))
+            ciftify_visualization_command = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;cifti_vis_fmri subject --ciftify-work-dir %s %s %s' % (ciftify_work_dir, task_name, subject_name)
+            os.system(ciftify_visualization_command)
+            
+            # Interpolate to native 
+            # sub = ny.hcp_subject(os.path.join(ciftify_work_dir, subject_name), default_alignment='FS')
+            # hem_from_left = sub.hemis['lh_LR32k']
+            # hem_from_right = sub.hemis['rh_LR32k']
+            # hem_to_left = sub.hemis['lh']
+            # hem_to_right = sub.hemis['rh']
+            
+            os.system('cd %s; zip -r -q %s *' % (main_task_folder, os.path.join(final_output_dir, '%s_surfaces.zip' % task_name)))
 ########################### Plot new maps ####################################
     #### This is still in the loop and registerToCustomSurface condition ####
             # Empty folder for images
-            images_main = '/tmp/images_folder'
+            images_main = os.path.join(task_name, '/tmp/images_folder')
             os.system('mkdir %s' % images_main)
             images = os.path.join(images_main, 'images')
             os.system('mkdir %s' % images)
             
             # Make task specific diagnostic folders 
             task_diagnostics = os.path.join(images, task_name)
+            os.system('mkdir %s' % task_diagnostics)
                 
             # Load the giftis and plot
             giftifig1 = plt.figure(figsize=[11,6])
@@ -193,7 +215,7 @@ for i in inputImage:
                                         title='FS right', figure=giftifig8,
                                         output_file=os.path.join(images, task_diagnostics, 'lat_FS_right.png'))
         
-            os.system('mv %s/* %s/' % (os.path.join(ciftify_work_dir, 'qc_fmri', 'mysubject %s' % task_name), os.path.join(images, task_diagnostics)))
+            os.system('mv %s/* %s/' % (os.path.join(ciftify_work_dir, 'qc_fmri', '%s_%s' % (subject_name, task_name)), os.path.join(images, task_diagnostics)))
 
             # Make html
             html_file = open('%s/index.html' % images_main,'w')
@@ -246,4 +268,4 @@ for i in inputImage:
 ################## Zip the surfaces and output ##################################
 if not outputDiagnosticForAllTasks:
     os.system('cd %s; zip -r -q %s *' % (images_main, os.path.join(final_output_dir, '%s_diagnostics.zip' % task_name)))
-os.system('cd %s; zip -r -q %s *' % (first_output_dir, os.path.join(final_output_dir, 'surface.zip')))
+
