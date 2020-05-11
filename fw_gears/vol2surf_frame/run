@@ -87,6 +87,23 @@ standard_mesh_path = '/standard_mesh_atlases'
 standard_meshes = '/tmp/standard_mesh_atlases'
 os.system('unzip -q %s -d /tmp' % standard_mesh_path)
 
+# Calculate the warp between raw surface anatomical and MNI152 with ants
+# raw_to_mni = '/raw2mni'
+# os.system('mkdir %s' % raw_to_mni)
+# raw_image_mgz = os.path.join(unzipped_recon_all, 'mri', 'rawavg.mgz')
+# raw_image_nifti = os.path.join(unzipped_recon_all, 'mri', 'rawavg.nii')
+# os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_convert %s %s' % (freesurfer_subject_dir, raw_image_mgz, raw_image_nifti))
+# mni_image = '/fsl/data/standard/MNI152_T1_2mm.nii.gz'
+# os.system('export ANTSPATH=/usr/lib/ants/;export PATH=${ANTSPATH}:$PATH;/usr/lib/ants/antsRegistrationSyNQuick -d 3 -f %s -m %s -o %s -n 5' % (mni_image, raw_image_nifti, os.path.join(raw_to_mni, 'orig2mni')))
+# generic_affine_file = os.path.join(raw_to_mni, 'orig2mni0GenericAffine.mat')
+# inverse_warp_file = os.path.join(raw_to_mni, 'orig2mni1InverseWarp.nii.gz')
+# warped_file = os.path.join(raw_to_mni, 'orig2mni1InverseWarp.nii.gz')
+# # Create a register.dat from the FSL identity matrix
+# fsl_identity_matrix = os.path.join('/fsl' 'etc', 'flirtsch', 'ident.mat')
+# registerdat_path = os.path.join(raw_to_mni, 'register.dat')
+# os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/tkregister2 --mov %s --fsl %s --targ %s --noedit --reg %s' % (freesurfer_subject_dir, raw_image_nifti, fsl_identity_matrix,
+#                                                                                                                                                                                                                          raw_image_nifti, registerdat_path))
+
 ################### Run Algorithm ################################
 for i in inputImage:
     
@@ -98,14 +115,14 @@ for i in inputImage:
        
     # Create the folder structure 
     main_task_folder = os.path.join(first_output_dir, task_name)
-    freesurfer_surface_folder = os.path.join(first_output_dir, main_task_folder, 'freesurfer164k')
+    freesurfer_surface_folder = os.path.join(first_output_dir, main_task_folder, 'freesurfer')
+    freesurfer_surface_native = os.path.join(freesurfer_surface_folder, 'native')
+    freesurfer_surface_fs = os.path.join(freesurfer_surface_folder, 'fsaverage')    
     gifti_surface_folder = os.path.join(first_output_dir, main_task_folder, 'giftiFSLR_32k')
-    cifti_surface_folder = os.path.join(first_output_dir, main_task_folder, 'cifti')
-    cifti_surface_atlas = os.path.join(cifti_surface_folder, 'FSLR_32k')
-    cifti_surface_native = os.path.join(cifti_surface_folder, 'native')
+    cifti_surface_folder = os.path.join(first_output_dir, main_task_folder, 'ciftiFSLR_32k')
     os.system('mkdir %s %s %s %s %s %s' % (main_task_folder, freesurfer_surface_folder, 
-                                           gifti_surface_folder, cifti_surface_folder, 
-                                           cifti_surface_atlas, cifti_surface_native))
+                                           freesurfer_surface_native, freesurfer_surface_fs,
+                                           gifti_surface_folder, cifti_surface_folder))
           
     # Get the image type
     image = nb.load(i)
@@ -114,7 +131,7 @@ for i in inputImage:
     if image_type == 'nifti': 
         left_intgifti, right_intgifti, left_mgz, right_mgz = map_vol2fs(i, 
                                                                         inputTemplate, 
-                                                                        freesurfer_surface_folder, 
+                                                                        freesurfer_surface_fs, 
                                                                         freesurfer_subject_dir,
                                                                         recon_all_folder = unzipped_recon_all,
                                                                         input_is_MNI=inputIsAlreadyInMNI152, 
@@ -134,13 +151,19 @@ for i in inputImage:
             ciftify_visualization_command = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;cifti_vis_fmri subject --ciftify-work-dir %s %s %s' % (ciftify_work_dir, task_name, subject_name)
             os.system(ciftify_visualization_command)
             
-            # Interpolate to native 
-            # sub = ny.hcp_subject(os.path.join(ciftify_work_dir, subject_name), default_alignment='FS')
-            # hem_from_left = sub.hemis['lh_LR32k']
-            # hem_from_right = sub.hemis['rh_LR32k']
-            # hem_to_left = sub.hemis['lh']
-            # hem_to_right = sub.hemis['rh']
-            
+            # # Interpolate to native 
+            # intermediate_warped_folder = '/intermediate_warped'
+            # os.system('mkdir %s' % intermediate_warped_folder)
+            # transformed_image_name = os.path.join(intermediate_warped_folder, 'transformed_%s.nii.gz' % i)
+            # os.system('export ANTSPATH=/usr/lib/ants/;export PATH=${ANTSPATH}:$PATH;/usr/lib/ants/antsApplyTransforms -d 4 -i %s -r %s -t [%s,1] -t %s -o %s' % (i, raw_image_nifti, generic_affine_file, inverse_warp_file, transformed_image_name))
+            # left_hemi_native = os.path.join(freesurfer_surface_native, 'native_left_%s.nii.gz' % task_name)
+            # right_hemi_native = os.path.join(freesurfer_surface_native, 'native_right_%s.nii.gz' % task_name)
+            # os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi lh --o %s' % (freesurfer_subject_dir, transformed_image_name, transformed_image_name,
+            #                                                                                                                                                                                                                                                 registerdat_path, freesurfer_subject_dir,
+            #                                                                                                                                                                                                                                                 subject_name, left_hemi_native))
+            # os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi rh --o %s' % (freesurfer_subject_dir, transformed_image_name, transformed_image_name,
+            #                                                                                                                                                                                                                                                 registerdat_path, freesurfer_subject_dir,
+            #                                                                                                                                                                                                                                                 subject_name, right_hemi_native))            
             os.system('cd %s; zip -r -q %s *' % (main_task_folder, os.path.join(final_output_dir, '%s_surfaces.zip' % task_name)))
 ########################### Plot new maps ####################################
     #### This is still in the loop and registerToCustomSurface condition ####
@@ -193,10 +216,11 @@ for i in inputImage:
             if len(left_map.shape) != 1:
                 left_map = left_map[:,0]
                 right_map = right_map[:,0]
-            left_inflated = nilearn.surface.load_surf_mesh(os.path.join(unzipped_recon_all, 'surf', 'lh.inflated'))
-            right_inflated = nilearn.surface.load_surf_mesh(os.path.join(unzipped_recon_all, 'surf', 'rh.inflated'))
-            left_sulc = os.path.join(unzipped_recon_all, 'surf', 'lh.sulc')
-            right_sulc = os.path.join(unzipped_recon_all, 'surf', 'rh.sulc')
+            
+            left_inflated = nilearn.surface.load_surf_mesh(os.path.join(freesurfer_subject_dir, 'fsaverage', 'surf', 'lh.inflated'))
+            right_inflated = nilearn.surface.load_surf_mesh(os.path.join(freesurfer_subject_dir, 'fsaverage', 'surf', 'rh.inflated'))
+            left_sulc = os.path.join(freesurfer_subject_dir, 'fsaverage', 'surf', 'lh.sulc')
+            right_sulc = os.path.join(freesurfer_subject_dir, 'fsaverage', 'surf', 'rh.sulc')
             
             plotting.plot_surf_stat_map(left_inflated, left_map, 
                                         view='medial', bg_map=left_sulc, 
