@@ -1,9 +1,7 @@
 #!/anaconda3/bin/python3
 
 import os, json, nilearn
-import neuropythy as ny
 import nibabel as nb
-import numpy as np
 import matplotlib.pyplot as plt
 import hcp_utils as hcp
 from map_fs2gifti import map_fs2gifti
@@ -32,15 +30,13 @@ with open(config_path) as config_file:
 config = job_config['config']
 
 imageName = config['imageName']
-registerToCustomSurface = config['registerToCustomSurface']
 saveCiftifyStructure = config['saveCiftifyStructure']
-inputIsAlreadyInMNI152 = config['inputIsAlreadyInMNI152']
 outputDiagnosticForAllTasks = config['outputDiagnosticForAllTasks']
+FSsurfaceTemplate = config['FSsurfaceTemplate']
 
 ################### Set path to input ##############################
 
 inputImageOrArchive_path = os.path.join(flywheel_base, 'input/inputImageOrArchive/')
-registrationTemplate_path = os.path.join(flywheel_base, 'input/registrationTemplate/')
 zippedReconAll_path = os.path.join(flywheel_base, 'input/zippedReconAll/')
 
 ## Get the input image ##
@@ -61,15 +57,6 @@ elif os.path.splitext(inputImageOrArchive)[1] == 'zip':
 else:
     raise RuntimeError('Image input is not a zip or nifti. Type unrecognized.')
 
-## Get the registration template if one exists ##
-if os.path.exists(registrationTemplate_path):
-    if os.listdir(registrationTemplate_path)[0][-3:] == '.gz' or 'nii':
-        inputTemplate = os.path.join(registrationTemplate_path, os.listdir(registrationTemplate_path)[0])
-    else:
-        raise RuntimeError('registration template is not nifti')
-else:
-    inputTemplate = 'NA'    
-
 ## Get the recon-all.
 if os.path.exists(zippedReconAll_path):
     zippedReconAll = os.path.join(zippedReconAll_path, os.listdir(zippedReconAll_path)[0])
@@ -78,31 +65,13 @@ if os.path.exists(zippedReconAll_path):
     subject_name = os.listdir(unzipped_recon_all)[0]
     os.system('mv %s/* %s/%s' % (unzipped_recon_all, freesurfer_subject_dir, subject_name))
     unzipped_recon_all = os.path.join(freesurfer_subject_dir, subject_name)
-elif not os.path.exists(zippedReconAll_path) and registerToCustomSurface:
-    raise RuntimeError('You need a recon all input for custom surface mappings')
 else:
-    unzipped_recon_all = os.path.join(freesurfer_subject_dir, 'fsaverage')
-    
+    raise RuntimeError('There is no recon all archive !')
+
+## Unzip the surface meshes     
 standard_mesh_path = '/standard_mesh_atlases'
 standard_meshes = '/tmp/standard_mesh_atlases'
 os.system('unzip -q %s -d /tmp' % standard_mesh_path)
-
-# Calculate the warp between raw surface anatomical and MNI152 with ants
-# raw_to_mni = '/raw2mni'
-# os.system('mkdir %s' % raw_to_mni)
-# raw_image_mgz = os.path.join(unzipped_recon_all, 'mri', 'rawavg.mgz')
-# raw_image_nifti = os.path.join(unzipped_recon_all, 'mri', 'rawavg.nii')
-# os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_convert %s %s' % (freesurfer_subject_dir, raw_image_mgz, raw_image_nifti))
-# mni_image = '/fsl/data/standard/MNI152_T1_2mm.nii.gz'
-# os.system('export ANTSPATH=/usr/lib/ants/;export PATH=${ANTSPATH}:$PATH;/usr/lib/ants/antsRegistrationSyNQuick -d 3 -f %s -m %s -o %s -n 5' % (mni_image, raw_image_nifti, os.path.join(raw_to_mni, 'orig2mni')))
-# generic_affine_file = os.path.join(raw_to_mni, 'orig2mni0GenericAffine.mat')
-# inverse_warp_file = os.path.join(raw_to_mni, 'orig2mni1InverseWarp.nii.gz')
-# warped_file = os.path.join(raw_to_mni, 'orig2mni1InverseWarp.nii.gz')
-# # Create a register.dat from the FSL identity matrix
-# fsl_identity_matrix = os.path.join('/fsl' 'etc', 'flirtsch', 'ident.mat')
-# registerdat_path = os.path.join(raw_to_mni, 'register.dat')
-# os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/tkregister2 --mov %s --fsl %s --targ %s --noedit --reg %s' % (freesurfer_subject_dir, raw_image_nifti, fsl_identity_matrix,
-#                                                                                                                                                                                                                          raw_image_nifti, registerdat_path))
 
 ################### Run Algorithm ################################
 for i in inputImage:
@@ -121,174 +90,219 @@ for i in inputImage:
     gifti_surface_folder = os.path.join(first_output_dir, main_task_folder, 'giftiFSLR_32k')
     cifti_surface_folder = os.path.join(first_output_dir, main_task_folder, 'ciftiFSLR_32k')
     os.system('mkdir %s %s %s %s %s %s' % (main_task_folder, freesurfer_surface_folder, 
-                                           freesurfer_surface_native, freesurfer_surface_fs,
-                                           gifti_surface_folder, cifti_surface_folder))
+                                            freesurfer_surface_native, freesurfer_surface_fs,
+                                            gifti_surface_folder, cifti_surface_folder))
           
     # Get the image type
     image = nb.load(i)
     image_type = str(type(image))[16:21]
     
     if image_type == 'nifti': 
-        left_intgifti, right_intgifti, left_mgz, right_mgz = map_vol2fs(i, 
-                                                                        inputTemplate, 
-                                                                        freesurfer_surface_fs, 
-                                                                        freesurfer_subject_dir,
-                                                                        recon_all_folder = unzipped_recon_all,
-                                                                        input_is_MNI=inputIsAlreadyInMNI152, 
-                                                                        custom_recon_all=registerToCustomSurface)  
-        if not registerToCustomSurface:
-            final_gifti_left, final_gifti_right = map_fs2gifti(left_intgifti, right_intgifti, 
-                                                                standard_meshes, gifti_surface_folder, 
-                                                                resolution='32k')
-            # Create a ciftify directory and call ciftify
-            ciftify_work_dir = '/hcp_dir/'
-            os.system('mkdir %s' % ciftify_work_dir)
-            ciftify_recon_run = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s --surf-reg FS --fs-license /freesurfer/license.txt --n_cpus 2 --verbose %s' % (ciftify_work_dir, freesurfer_subject_dir, subject_name)
-            os.system(ciftify_recon_run)
-            ciftify_dtseries_run = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_subject_fmri --already-in-MNI --surf-reg FS --ciftify-work-dir %s %s %s %s -v' % (ciftify_work_dir, i, subject_name, task_name)
-            os.system(ciftify_dtseries_run)
-            os.system('cp %s %s/' % (os.path.join(ciftify_work_dir, subject_name, 'MNINonLinear', 'Results', task_name, '%s_Atlas_s0.dtseries.nii' % task_name), cifti_surface_atlas))
-            ciftify_visualization_command = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;cifti_vis_fmri subject --ciftify-work-dir %s %s %s' % (ciftify_work_dir, task_name, subject_name)
-            os.system(ciftify_visualization_command)
-            
-            # # Interpolate to native 
-            # intermediate_warped_folder = '/intermediate_warped'
-            # os.system('mkdir %s' % intermediate_warped_folder)
-            # transformed_image_name = os.path.join(intermediate_warped_folder, 'transformed_%s.nii.gz' % i)
-            # os.system('export ANTSPATH=/usr/lib/ants/;export PATH=${ANTSPATH}:$PATH;/usr/lib/ants/antsApplyTransforms -d 4 -i %s -r %s -t [%s,1] -t %s -o %s' % (i, raw_image_nifti, generic_affine_file, inverse_warp_file, transformed_image_name))
-            # left_hemi_native = os.path.join(freesurfer_surface_native, 'native_left_%s.nii.gz' % task_name)
-            # right_hemi_native = os.path.join(freesurfer_surface_native, 'native_right_%s.nii.gz' % task_name)
-            # os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi lh --o %s' % (freesurfer_subject_dir, transformed_image_name, transformed_image_name,
-            #                                                                                                                                                                                                                                                 registerdat_path, freesurfer_subject_dir,
-            #                                                                                                                                                                                                                                                 subject_name, left_hemi_native))
-            # os.system('export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FreeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/mri_vol2surf --mov %s --ref %s --reg %s --sd %s --srcsubject %s --hemi rh --o %s' % (freesurfer_subject_dir, transformed_image_name, transformed_image_name,
-            #                                                                                                                                                                                                                                                 registerdat_path, freesurfer_subject_dir,
-            #                                                                                                                                                                                                                                                 subject_name, right_hemi_native))            
-            os.system('cd %s; zip -r -q %s *' % (main_task_folder, os.path.join(final_output_dir, '%s_surfaces.zip' % task_name)))
-########################### Plot new maps ####################################
-    #### This is still in the loop and registerToCustomSurface condition ####
-            # Empty folder for images
-            images_main = os.path.join(task_name, '/tmp/images_folder')
-            os.system('mkdir %s' % images_main)
-            images = os.path.join(images_main, 'images')
-            os.system('mkdir %s' % images)
-            
-            # Make task specific diagnostic folders 
-            task_diagnostics = os.path.join(images, task_name)
-            os.system('mkdir %s' % task_diagnostics)
-                
-            # Load the giftis and plot
-            giftifig1 = plt.figure(figsize=[11,6])
-            giftifig2 = plt.figure(figsize=[11,6])
-            giftifig3 = plt.figure(figsize=[11,6])
-            giftifig4 = plt.figure(figsize=[11,6])
-            
-            gifti_left = nb.load(final_gifti_left)
-            gifti_right = nb.load(final_gifti_right)
-            gifti_left_data = gifti_left.darrays[0].data
-            gifti_right_data = gifti_right.darrays[0].data
-            
-            plotting.plot_surf_stat_map(hcp.mesh.inflated_left, gifti_left_data, 
-                                        view='medial', bg_map=hcp.mesh.sulc_left, 
-                                        title='gifti left', figure=giftifig1,
-                                        output_file=os.path.join(images, task_diagnostics, 'med_gifti_left.png'))
-            plotting.plot_surf_stat_map(hcp.mesh.inflated_left, gifti_left_data, 
-                                        view='lateral', bg_map=hcp.mesh.sulc_left, 
-                                        title='gifti left', figure=giftifig2,
-                                        output_file=os.path.join(images, task_diagnostics, 'lat_gifti_left.png'))
-            plotting.plot_surf_stat_map(hcp.mesh.inflated_right, gifti_right_data, 
-                                        view='medial', bg_map=hcp.mesh.sulc_right, 
-                                        title='gifti right', figure=giftifig3,
-                                        output_file=os.path.join(images, task_diagnostics, 'med_gifti_right.png'))
-            plotting.plot_surf_stat_map(hcp.mesh.inflated_right, gifti_right_data, 
-                                        view='lateral', bg_map=hcp.mesh.sulc_right, 
-                                        title='gifti right', figure=giftifig4,
-                                        output_file=os.path.join(images, task_diagnostics, 'lat_gifti_right.png'))
-            
-            # Plot fs images 
-            giftifig5 = plt.figure(figsize=[11,6])
-            giftifig6 = plt.figure(figsize=[11,6])
-            giftifig7 = plt.figure(figsize=[11,6])
-            giftifig8 = plt.figure(figsize=[11,6])
-            
-            left_map = nilearn.surface.load_surf_data(left_mgz)
-            right_map = nilearn.surface.load_surf_data(right_mgz)
-            if len(left_map.shape) != 1:
-                left_map = left_map[:,0]
-                right_map = right_map[:,0]
-            
-            left_inflated = nilearn.surface.load_surf_mesh(os.path.join(freesurfer_subject_dir, 'fsaverage', 'surf', 'lh.inflated'))
-            right_inflated = nilearn.surface.load_surf_mesh(os.path.join(freesurfer_subject_dir, 'fsaverage', 'surf', 'rh.inflated'))
-            left_sulc = os.path.join(freesurfer_subject_dir, 'fsaverage', 'surf', 'lh.sulc')
-            right_sulc = os.path.join(freesurfer_subject_dir, 'fsaverage', 'surf', 'rh.sulc')
-            
-            plotting.plot_surf_stat_map(left_inflated, left_map, 
-                                        view='medial', bg_map=left_sulc, 
-                                        title='FS left', figure=giftifig5,
-                                        output_file=os.path.join(images, task_diagnostics, 'med_FS_left.png'))
-            plotting.plot_surf_stat_map(left_inflated, left_map, 
-                                        view='lateral', bg_map=left_sulc, 
-                                        title='FS left', figure=giftifig6,
-                                        output_file=os.path.join(images, task_diagnostics, 'lat_FS_left.png'))
-            plotting.plot_surf_stat_map(right_inflated, right_map, 
-                                        view='medial', bg_map=right_sulc, 
-                                        title='FS right', figure=giftifig7,
-                                        output_file=os.path.join(images, task_diagnostics, 'med_FS_right.png'))
-            plotting.plot_surf_stat_map(right_inflated, right_map, 
-                                        view='lateral', bg_map=right_sulc, 
-                                        title='FS right', figure=giftifig8,
-                                        output_file=os.path.join(images, task_diagnostics, 'lat_FS_right.png'))
+        freesurfer_environment_path = 'export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FeeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/' % freesurfer_subject_dir
+        native_left, native_right, fsaverage_left, fsaverage_right = map_vol2fs(i, 
+                                                                                freesurfer_subject_dir, 
+                                                                                subject_name, 
+                                                                                freesurfer_environment_path,
+                                                                                freesurfer_surface_native,
+                                                                                freesurfer_surface_fs, 
+                                                                                FSsurfaceTemplate)  
         
-            os.system('mv %s/* %s/' % (os.path.join(ciftify_work_dir, 'qc_fmri', '%s_%s' % (subject_name, task_name)), os.path.join(images, task_diagnostics)))
+        # Map surfaces to gifti FSLR
+        if native_left[-3:] == 'mgz':
+            fmri_name_left = os.path.split(native_left)[1]
+            fmri_name_right = os.path.split(native_right)[1]
+            fmri_name_left = fmri_name_left[:-4]
+            fmri_name_right = fmri_name_right[:-4]
+        
+        print(fmri_name_left)
+        
+        gifti_converted_nat_left = os.path.join(first_output_dir, fmri_name_left + '.gii')
+        gifti_converted_nat_right = os.path.join(first_output_dir, fmri_name_right + '.gii')
+        convert_left = '%s %s %s' % (os.path.join(freesurfer_environment_path, 'mri_convert.bin'),
+                                      native_left, gifti_converted_nat_left)
+        convert_right = '%s %s %s' % (os.path.join(freesurfer_environment_path, 'mri_convert.bin'),
+                                      native_right, gifti_converted_nat_right)
+        os.system(convert_left)
+        os.system(convert_right)
+        
+        workbench_path = '/usr/bin/'
+        metric_out_left, metric_out_right = map_fs2gifti(gifti_converted_nat_left, gifti_converted_nat_right, workbench_path, os.path.join(freesurfer_subject_dir, subject_name), standard_meshes, first_output_dir, source_space='native', resolution='32k')
+        os.system('cp %s %s' % (metric_out_left, gifti_surface_folder))
+        os.system('cp %s %s' % (metric_out_right, gifti_surface_folder))
+        
+        # Run ciftify and map to cifti FSLR
+        ciftify_work_dir = '/hcp_dir/'
+        os.system('mkdir %s' % ciftify_work_dir)
+        ciftify_recon_run = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s --surf-reg FS --fs-license /freesurfer/license.txt --n_cpus 2 --verbose %s' % (ciftify_work_dir, freesurfer_subject_dir, subject_name)
+        os.system(ciftify_recon_run)
+        ciftify_dtseries_run = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_subject_fmri --surf-reg FS --ciftify-work-dir %s %s %s %s -v' % (ciftify_work_dir, i, subject_name, task_name)
+        os.system(ciftify_dtseries_run)
+        os.system('cp %s %s/' % (os.path.join(ciftify_work_dir, subject_name, 'MNINonLinear', 'Results', task_name, '%s_Atlas_s0.dtseries.nii' % task_name), cifti_surface_folder))
+        ciftify_visualization_command = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;cifti_vis_fmri subject --ciftify-work-dir %s %s %s' % (ciftify_work_dir, task_name, subject_name)
+        os.system(ciftify_visualization_command)
+        
+        os.system('cd %s; zip -r -q %s *' % (main_task_folder, os.path.join(final_output_dir, '%s_surfaces.zip' % task_name)))
+########################### Plot new maps ####################################
+#### This is still in the loop ####
+        # Empty folder for images
+        images_main = '/tmp/%s_images_folder' % task_name
+        os.system('mkdir %s' % images_main)
+        images = os.path.join(images_main, 'images')
+        os.system('mkdir %s' % images)
+            
+        # Load the giftis and plot
+        giftifig1 = plt.figure(figsize=[11,6])
+        giftifig2 = plt.figure(figsize=[11,6])
+        giftifig3 = plt.figure(figsize=[11,6])
+        giftifig4 = plt.figure(figsize=[11,6])
+        
+        gifti_left = nb.load(metric_out_left)
+        gifti_right = nb.load(metric_out_right)
+        gifti_left_data = gifti_left.darrays[0].data
+        gifti_right_data = gifti_right.darrays[0].data
+        
+        plotting.plot_surf_stat_map(hcp.mesh.inflated_left, gifti_left_data, 
+                                    view='medial', bg_map=hcp.mesh.sulc_left, 
+                                    title='gifti left', figure=giftifig1,
+                                    output_file=os.path.join(images, 'med_gifti_left.png'))
+        plotting.plot_surf_stat_map(hcp.mesh.inflated_left, gifti_left_data, 
+                                    view='lateral', bg_map=hcp.mesh.sulc_left, 
+                                    title='gifti left', figure=giftifig2,
+                                    output_file=os.path.join(images, 'lat_gifti_left.png'))
+        plotting.plot_surf_stat_map(hcp.mesh.inflated_right, gifti_right_data, 
+                                    view='medial', bg_map=hcp.mesh.sulc_right, 
+                                    title='gifti right', figure=giftifig3,
+                                    output_file=os.path.join(images, 'med_gifti_right.png'))
+        plotting.plot_surf_stat_map(hcp.mesh.inflated_right, gifti_right_data, 
+                                    view='lateral', bg_map=hcp.mesh.sulc_right, 
+                                    title='gifti right', figure=giftifig4,
+                                    output_file=os.path.join(images, 'lat_gifti_right.png'))
 
-            # Make html
-            html_file = open('%s/index.html' % images_main,'w')
-            html_content = '''
-            <h1>Fsaverage surface</h1>
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Left_lateral">
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Right_lateral">   
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Left_medial">
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Right_medial">
-            <p style="clear: both;">
-            <h1>Gifti FSLR surface</h1>
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Left_lateral">
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Right_lateral">   
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Left_medial">
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Right_medial">
-            <p style="clear: both;">   
-            <h1>ciftify - Pial Surface Overlayed on Mean Functional Image</h1>
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="pialonfunc">
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="pialonfunc">
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="pialonfunc">
-            <p style="clear: both;">   
-            <h1>ciftify - Intensity of the resampled subcortical fMRI data (1st TR), Unsmoothed</h1>
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="intensity Subcort">
-            <p style="clear: both;">   
-            <h1>ciftify - Intensity of the Projected fMRI data (1st TR), Unsmoothed</h1>
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="fmri">
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="fmri">
-            <p style="clear: both;">   
-            <h1>ciftify - Correlation with partietal seed (Dorsal Attention Network) - Smoothed with 4mm FWHM</h1>
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="partietal corr">
-            <p style="clear: both;">    
-            <h1>ciftify - Correlation with precuneus seed (Default Mode Network) - Smoothed with 4mm FWHM - Smoothed with 4mm FWHM</h1>
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="precuneus corr">
-            <p style="clear: both;">   
-            <h1>ciftify - Correlation with insula seed (Salience Network) - Smoothed with 4mm FWHM</h1>
-            <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="insula corr">
-            <p style="clear: both;">   
-            ''' % ('images/med_gifti_left.png', 'images/med_gifti_right.png', 'images/lat_gifti_left.png', 'images/lat_gifti_left.png',
-                    'images/med_FS_left.png', 'images/med_FS_right.png', 'images/lat_FS_left.png', 'images/lat_FS_right.png', 
-                    'images/PialRegCor.png', 'images/PialRegAx.png', 'images/PialRegSag.png', 'images/fmri_Subcortical.png',
-                    'images/fmri_LM.png', 'images/fmri_DV.png', 'images/DAN_conn.png', 'images/DMN_conn.png', 'images/SAL_conn.png')
-                
-            html_file.write(html_content)
-            html_file.close() 
-            if outputDiagnosticForAllTasks:
-                os.system('cd %s; zip -r -q %s *' % (images_main, os.path.join(final_output_dir, '%s_diagnostics.zip' % task_name)))
+        # Plot native fs images 
+        giftifig5 = plt.figure(figsize=[11,6])
+        giftifig6 = plt.figure(figsize=[11,6])
+        giftifig7 = plt.figure(figsize=[11,6])
+        giftifig8 = plt.figure(figsize=[11,6])
+        
+        left_map = nilearn.surface.load_surf_data(native_left)
+        right_map = nilearn.surface.load_surf_data(native_right)
+        if len(left_map.shape) != 1:
+            left_map = left_map[:,0]
+            right_map = right_map[:,0]
+        
+        left_inflated = nilearn.surface.load_surf_mesh(os.path.join(freesurfer_subject_dir, subject_name, 'surf', 'lh.inflated'))
+        right_inflated = nilearn.surface.load_surf_mesh(os.path.join(freesurfer_subject_dir, subject_name, 'surf', 'rh.inflated'))
+        left_sulc = os.path.join(freesurfer_subject_dir, subject_name, 'surf', 'lh.sulc')
+        right_sulc = os.path.join(freesurfer_subject_dir, subject_name, 'surf', 'rh.sulc')
+        
+        plotting.plot_surf_stat_map(left_inflated, left_map, 
+                                    view='medial', bg_map=left_sulc, 
+                                    title='FSnat left', figure=giftifig5,
+                                    output_file=os.path.join(images, 'med_FSnat_left.png'))
+        plotting.plot_surf_stat_map(left_inflated, left_map, 
+                                    view='lateral', bg_map=left_sulc, 
+                                    title='FSnat left', figure=giftifig6,
+                                    output_file=os.path.join(images, 'lat_FSnat_left.png'))
+        plotting.plot_surf_stat_map(right_inflated, right_map, 
+                                    view='medial', bg_map=right_sulc, 
+                                    title='FSnat right', figure=giftifig7,
+                                    output_file=os.path.join(images, 'med_FSnat_right.png'))
+        plotting.plot_surf_stat_map(right_inflated, right_map, 
+                                    view='lateral', bg_map=right_sulc, 
+                                    title='FSnat right', figure=giftifig8,
+                                    output_file=os.path.join(images, 'lat_FSnat_right.png'))
+  
+        # Plot fsaverage fs images 
+        giftifig9 = plt.figure(figsize=[11,6])
+        giftifig10 = plt.figure(figsize=[11,6])
+        giftifig11 = plt.figure(figsize=[11,6])
+        giftifig12 = plt.figure(figsize=[11,6])
+        
+        left_map = nilearn.surface.load_surf_data(fsaverage_left)
+        right_map = nilearn.surface.load_surf_data(fsaverage_right)
+        if len(left_map.shape) != 1:
+            left_map = left_map[:,0]
+            right_map = right_map[:,0]
+        
+        left_inflated = nilearn.surface.load_surf_mesh(os.path.join(freesurfer_subject_dir, 'fsaverage', 'surf', 'lh.inflated'))
+        right_inflated = nilearn.surface.load_surf_mesh(os.path.join(freesurfer_subject_dir, 'fsaverage', 'surf', 'rh.inflated'))
+        left_sulc = os.path.join(freesurfer_subject_dir, 'fsaverage', 'surf', 'lh.sulc')
+        right_sulc = os.path.join(freesurfer_subject_dir, 'fsaverage', 'surf', 'rh.sulc')
+        
+        plotting.plot_surf_stat_map(left_inflated, left_map, 
+                                    view='medial', bg_map=left_sulc, 
+                                    title='FSavg left', figure=giftifig9,
+                                    output_file=os.path.join(images, 'med_FSavg_left.png'))
+        plotting.plot_surf_stat_map(left_inflated, left_map, 
+                                    view='lateral', bg_map=left_sulc, 
+                                    title='FSavg left', figure=giftifig10,
+                                    output_file=os.path.join(images, 'lat_FSavg_left.png'))
+        plotting.plot_surf_stat_map(right_inflated, right_map, 
+                                    view='medial', bg_map=right_sulc, 
+                                    title='FSavg right', figure=giftifig11,
+                                    output_file=os.path.join(images, 'med_FSavg_right.png'))
+        plotting.plot_surf_stat_map(right_inflated, right_map, 
+                                    view='lateral', bg_map=right_sulc, 
+                                    title='FSavg right', figure=giftifig12,
+                                    output_file=os.path.join(images, 'lat_FSavg_right.png'))
+    
+        os.system('cp %s/* %s/' % (os.path.join(ciftify_work_dir, 'qc_fmri', '%s_%s' % (subject_name, task_name)), images))
+
+        # Make html
+        html_file = open('%s/index.html' % images_main,'w')
+        html_content = '''
+        <h1>FS Native surface</h1>
+        <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Left_lateral">
+        <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Right_lateral">   
+        <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Left_medial">
+        <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Right_medial">
+        <p style="clear: both;">
+        <h1>Fsaverage surface</h1>
+        <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Left_lateral">
+        <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Right_lateral">   
+        <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Left_medial">
+        <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Right_medial">
+        <p style="clear: both;">
+        <h1>Gifti FSLR surface</h1>
+        <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Left_lateral">
+        <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Right_lateral">   
+        <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Left_medial">
+        <img src="./%s" style="float: left; width: 30%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="Right_medial">
+        <p style="clear: both;">   
+        <h1>ciftify - Pial Surface Overlayed on Mean Functional Image</h1>
+        <img src="./%s" style="float: left; width: 100%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="pialonfunc">
+        <img src="./%s" style="float: left; width: 100%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="pialonfunc">
+        <img src="./%s" style="float: left; width: 100%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="pialonfunc">
+        <p style="clear: both;">   
+        <h1>ciftify - Intensity of the resampled subcortical fMRI data (1st TR), Unsmoothed</h1>
+        <img src="./%s" style="float: left; width: 100%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="intensity Subcort">
+        <p style="clear: both;">   
+        <h1>ciftify - Intensity of the Projected fMRI data (1st TR), Unsmoothed</h1>
+        <img src="./%s" style="float: left; width: 100%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="fmri">
+        <img src="./%s" style="float: left; width: 50%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="fmri">
+        <p style="clear: both;">   
+        <h1>ciftify - Correlation with partietal seed (Dorsal Attention Network) - Smoothed with 4mm FWHM</h1>
+        <img src="./%s" style="float: left; width: 90%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="partietal corr">
+        <p style="clear: both;">    
+        <h1>ciftify - Correlation with precuneus seed (Default Mode Network) - Smoothed with 4mm FWHM - Smoothed with 4mm FWHM</h1>
+        <img src="./%s" style="float: left; width: 100%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="precuneus corr">
+        <p style="clear: both;">   
+        <h1>ciftify - Correlation with insula seed (Salience Network) - Smoothed with 4mm FWHM</h1>
+        <img src="./%s" style="float: left; width: 100%%; margin-right: 1%%; margin-bottom: 0.5em;" alt="insula corr">
+        <p style="clear: both;">   
+        ''' % ('images/med_FSnat_left.png', 'images/med_FSnat_right.png', 'images/lat_FSnat_left.png', 'images/lat_FSnat_right.png', 
+                'images/med_FSavg_left.png', 'images/med_FSavg_right.png', 'images/lat_FSavg_left.png', 'images/lat_FSavg_right.png', 
+                'images/med_gifti_left.png', 'images/med_gifti_right.png', 'images/lat_gifti_left.png', 'images/lat_gifti_right.png',
+                'images/PialRegCor.png', 'images/PialRegAx.png', 'images/PialRegSag.png', 'images/fmri_Subcortical.png',
+                'images/fmri_LM.png', 'images/fmri_DV.png', 'images/DAN_conn.png', 'images/DMN_conn.png', 'images/SAL_conn.png')
+            
+        html_file.write(html_content)
+        html_file.close() 
+        if outputDiagnosticForAllTasks:
+            os.system('cd %s; zip -r -q %s *' % (images_main, os.path.join(final_output_dir, '%s_diagnostics.zip' % task_name)))
     else:
         raise RuntimeError('The image you have is not a nifti image. Currently, only volumetric to surface mapping is supported')
-    
+        
 ################## Zip the surfaces and output ##################################
 if not outputDiagnosticForAllTasks:
     os.system('cd %s; zip -r -q %s *' % (images_main, os.path.join(final_output_dir, '%s_diagnostics.zip' % task_name)))
