@@ -43,10 +43,10 @@ zippedReconAll_path = os.path.join(flywheel_base, 'input/zippedReconAll/')
 inputImageOrArchive = os.path.join(inputImageOrArchive_path, os.listdir(inputImageOrArchive_path)[0])
 inputImage = []
 # Single image case
-if os.path.splitext(inputImageOrArchive)[1] == '.gz' or os.path.splitext(inputImageOrArchive)[1] == 'nii':
+if os.path.splitext(inputImageOrArchive)[1] == '.gz' or os.path.splitext(inputImageOrArchive)[1] == '.nii':
     inputImage.append(inputImageOrArchive)
 # Input is archive
-elif os.path.splitext(inputImageOrArchive)[1] == 'zip':
+elif os.path.splitext(inputImageOrArchive)[1] == '.zip':
     unzipped_file_path = os.path.join('/opt', 'unzipped_files')
     os.system('unzip -q %s -d %s' % (inputImageOrArchive, unzipped_file_path))
     if imageName == 'all':
@@ -74,6 +74,13 @@ standard_meshes = '/tmp/standard_mesh_atlases'
 os.system('unzip -q %s -d /tmp' % standard_mesh_path)
 
 ################### Run Algorithm ################################
+
+# Run ciftify recon-all
+ciftify_work_dir = '/hcp_dir/'
+os.system('mkdir %s' % ciftify_work_dir)
+ciftify_recon_run = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s --surf-reg FS --fs-license /freesurfer/license.txt --n_cpus 2 --verbose %s' % (ciftify_work_dir, freesurfer_subject_dir, subject_name)
+os.system(ciftify_recon_run)
+
 for i in inputImage:
     
     # Get the image name for ciftify folder name 
@@ -131,16 +138,13 @@ for i in inputImage:
         os.system('cp %s %s' % (metric_out_right, gifti_surface_folder))
         
         # Run ciftify and map to cifti FSLR
-        ciftify_work_dir = '/hcp_dir/'
-        os.system('mkdir %s' % ciftify_work_dir)
-        ciftify_recon_run = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s --surf-reg FS --fs-license /freesurfer/license.txt --n_cpus 2 --verbose %s' % (ciftify_work_dir, freesurfer_subject_dir, subject_name)
-        os.system(ciftify_recon_run)
         ciftify_dtseries_run = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_subject_fmri --surf-reg FS --ciftify-work-dir %s %s %s %s -v' % (ciftify_work_dir, i, subject_name, task_name)
         os.system(ciftify_dtseries_run)
         os.system('cp %s %s/' % (os.path.join(ciftify_work_dir, subject_name, 'MNINonLinear', 'Results', task_name, '%s_Atlas_s0.dtseries.nii' % task_name), cifti_surface_folder))
         ciftify_visualization_command = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;cifti_vis_fmri subject --ciftify-work-dir %s %s %s' % (ciftify_work_dir, task_name, subject_name)
         os.system(ciftify_visualization_command)
         
+        # Zip results
         os.system('cd %s; zip -r -q %s *' % (main_task_folder, os.path.join(final_output_dir, '%s_surfaces.zip' % task_name)))
 ########################### Plot new maps ####################################
 #### This is still in the loop ####
