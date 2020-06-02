@@ -2,7 +2,7 @@
 	"name": "vol2surf",
 	"label": "vol2surf: Map volumetric MRI images to fsaverage and FSLR surfaces",
 	"description": "This gear maps volumetric time-series or R2 maps to surfaces. The gear uses freesurfer and python tools (ciftify) to make FS, gifti, and cifti surfaces. The gear can work with single images or archives",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"inputs": {
 		"inputImageOrArchive": {
 			"base": "file",
@@ -52,7 +52,7 @@
 		},
 		"gear-builder": {
 			"category": "analysis",
-			"image": "gkaguirrelab/vol2surf:0.1.5"
+			"image": "gkaguirrelab/vol2surf:0.1.6"
 		}
 	}
 }
