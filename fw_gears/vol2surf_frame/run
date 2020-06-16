@@ -82,13 +82,17 @@ os.system('mkdir %s' % ciftify_work_dir)
 ciftify_recon_run = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s --surf-reg FS --fs-license /freesurfer/license.txt --n_cpus 2 --verbose %s' % (freesurfer_environment_path, ciftify_work_dir, freesurfer_subject_dir, subject_name)
 os.system(ciftify_recon_run)
 
+# Intermediate temp
+inter_tmp = '/tmp/intertmp'
+os.system('mkdir %s' % inter_tmp)
+
 for i in inputImage:
     
     # Get the image name for ciftify folder name 
     name_without_path = os.path.split(i)[1]
     task_name = os.path.splitext(name_without_path)[0]
     if task_name[-3:] == 'nii':
-        task_name = 'task_' + task_name[:-4]
+        task_name = task_name[:-4]
        
     # Create the folder structure 
     main_task_folder = os.path.join(first_output_dir, task_name)
@@ -121,10 +125,8 @@ for i in inputImage:
             fmri_name_left = fmri_name_left[:-4]
             fmri_name_right = fmri_name_right[:-4]
         
-        print(fmri_name_left)
-        
-        gifti_converted_nat_left = os.path.join(first_output_dir, fmri_name_left + '.gii')
-        gifti_converted_nat_right = os.path.join(first_output_dir, fmri_name_right + '.gii')
+        gifti_converted_nat_left = os.path.join(inter_tmp, fmri_name_left + '.gii')
+        gifti_converted_nat_right = os.path.join(inter_tmp, fmri_name_right + '.gii')
         convert_left = 'export PATH="/freesurfer/bin:$PATH";%s %s %s' % (os.path.join(freesurfer_environment_path, 'mri_convert.bin'),
                                                                          native_left, gifti_converted_nat_left)
         convert_right = 'export PATH="/freesurfer/bin:$PATH";%s %s %s' % (os.path.join(freesurfer_environment_path, 'mri_convert.bin'),
@@ -133,7 +135,7 @@ for i in inputImage:
         os.system(convert_right)
         
         workbench_path = '/usr/bin/'
-        metric_out_left, metric_out_right = map_fs2gifti(gifti_converted_nat_left, gifti_converted_nat_right, workbench_path, os.path.join(freesurfer_subject_dir, subject_name), standard_meshes, first_output_dir, freesurfer_environment_path, source_space='native', resolution='32k')
+        metric_out_left, metric_out_right = map_fs2gifti(gifti_converted_nat_left, gifti_converted_nat_right, workbench_path, os.path.join(freesurfer_subject_dir, subject_name), standard_meshes, inter_tmp, freesurfer_environment_path, source_space='native', resolution='32k')
         os.system('cp %s %s' % (metric_out_left, gifti_surface_folder))
         os.system('cp %s %s' % (metric_out_right, gifti_surface_folder))
         
@@ -144,8 +146,6 @@ for i in inputImage:
         ciftify_visualization_command = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;cifti_vis_fmri subject --ciftify-work-dir %s %s %s' % (freesurfer_environment_path, ciftify_work_dir, task_name, subject_name)
         os.system(ciftify_visualization_command)
         
-        # Zip results
-        os.system('cd %s; zip -r -q %s *' % (main_task_folder, os.path.join(final_output_dir, '%s_surfaces.zip' % task_name)))
 ########################### Plot new maps ####################################
 #### This is still in the loop ####
         # Empty folder for images
@@ -303,11 +303,14 @@ for i in inputImage:
         html_file.write(html_content)
         html_file.close()
         if outputDiagnosticForAllTasks:
-            os.system('cd %s; zip -r -q %s *' % (images_main, os.path.join(final_output_dir, '%s_diagnostics.html.zip' % task_name)))
+            os.system('cd %s; zip -r -q %s *' % (images_main, os.path.join(final_output_dir, 'diagnostic_images_%s.html.zip' % task_name)))
     else:
         raise RuntimeError('The image you have is not a nifti image. Currently, only volumetric to surface mapping is supported')
         
 ################## Zip the surfaces and output ##################################
+# Zip results
+os.system('cd %s; zip -r -q %s *' % (first_output_dir, os.path.join(final_output_dir, 'surfaces.zip')))
+
 if not outputDiagnosticForAllTasks:
-    os.system('cd %s; zip -r -q %s *' % (images_main, os.path.join(final_output_dir, '%s_diagnostics.html.zip' % task_name)))
+    os.system('cd %s; zip -r -q %s *' % (images_main, os.path.join(final_output_dir, 'example_diagnostic_images_%s.html.zip' % task_name)))
 
