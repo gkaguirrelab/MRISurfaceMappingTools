@@ -311,3 +311,6 @@ for i in inputImage:
 if not outputDiagnosticForAllTasks:
     os.system('cd %s; zip -r -q %s *' % (images_main, os.path.join(final_output_dir, '%s_diagnostics.html.zip' % task_name)))
 
+if saveCiftifyStructure:
+    os.system('cd %s; zip -r -q %s *' % (ciftify_work_dir, os.path.join(final_output_dir, '%s_ciftify_folders.zip' % subject_name)))
+    
