@@ -35,6 +35,13 @@ output_cifti_resolution = '32k'
 # located
 run_ciftify_recon_all = True 
 
+# Set paths to software we need if you already didn't set environment paths 
+# to them before. If you can call Freesurfer, workbench and FSL from your
+# terminal, leave these empty 
+freesurfer_environment_path = '' 
+fsl_environment_path = ''
+workbench_path = ''
+
 ##############################################################################
 # Process the images 
 recon_all_folder = os.path.join(freesurfer_subject_dir, subject_name)
@@ -63,9 +70,11 @@ for image in input_volume:
                                               freesurfer_standard_output_path, 
                                               gifti_results_folder, cifti_results_folder))
     
-    native_left, native_right, fsaverage_left, fsaverage_right = map_vol2fs(image, subject_name, freesurfer_native_output_path, freesurfer_standard_output_path, output_freesurfer_template='fsaverage', freesurfer_environment_path='')
-    map_fs2gifti(native_left, native_right, recon_all_folder, standard_mesh_atlases_folder, subject_specific_intermediate_folder, gifti_results_folder, source_space='native', resolution='32k', workbench_path='', freesurfer_environment_path='')
-    ciftify_work_dir = map_vol2cifti(image, freesurfer_subject_dir, subject_name, subject_specific_intermediate_folder, cifti_results_folder, freesurfer_license_file, freesurfer_environment_path='', fsl_environment_path='', run_ciftify_recon_all = run_ciftify_recon_all)
+    native_left, native_right, fsaverage_left, fsaverage_right = map_vol2fs(image, subject_name, freesurfer_native_output_path, freesurfer_standard_output_path, output_freesurfer_template=output_freesurfer_template, freesurfer_environment_path=freesurfer_environment_path)
+    map_fs2gifti(native_left, native_right, recon_all_folder, standard_mesh_atlases_folder, subject_specific_intermediate_folder, gifti_results_folder, source_space='native', resolution=output_cifti_resolution, workbench_path=workbench_path, freesurfer_environment_path=freesurfer_environment_path)
+    if output_freesurfer_template == 'fsaverage':
+        map_fs2gifti(fsaverage_left, fsaverage_right, recon_all_folder, standard_mesh_atlases_folder, subject_specific_intermediate_folder, gifti_results_folder, source_space='fsaverage', resolution=output_cifti_resolution, workbench_path=workbench_path, freesurfer_environment_path=freesurfer_environment_path)
+    ciftify_work_dir = map_vol2cifti(image, freesurfer_subject_dir, subject_name, subject_specific_intermediate_folder, cifti_results_folder, freesurfer_license_file, freesurfer_environment_path=freesurfer_environment_path, fsl_environment_path=fsl_environment_path, run_ciftify_recon_all=run_ciftify_recon_all)
     
-    
+    # Set path to the ciftify directory so we don't run ciftify recon-all for each image.
     run_ciftify_recon_all = ciftify_work_dir
