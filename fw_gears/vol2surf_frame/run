@@ -19,7 +19,7 @@ manifest_file = os.path.join(flywheel_base, 'manifest.json')
 config_path = os.path.join(flywheel_base, 'config.json')
 freesurfer_subject_dir = '/freesurfer/subjects'
 os.system('mkdir %s'%first_output_dir)
-freesurfer_environment_path = 'export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FeeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;' % freesurfer_subject_dir
+freesurfer_environment_path = 'export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FeeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/' % freesurfer_subject_dir
 
 #Install bc
 os.system('apt-get install bc')
