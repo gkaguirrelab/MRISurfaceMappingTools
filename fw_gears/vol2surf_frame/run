@@ -9,6 +9,9 @@ from map_vol2fs import map_vol2fs
 from locate_file import locate_file
 from nilearn import plotting 
 
+## Print the disk space information
+os.system('df -h')
+
 ###################### Define the Paths and parameters ###########################
 
 # Set paths and create some folders
@@ -79,7 +82,7 @@ os.system('unzip -q %s -d /tmp' % standard_mesh_path)
 # Run ciftify recon-all
 ciftify_work_dir = '/hcp_dir/'
 os.system('mkdir %s' % ciftify_work_dir)
-ciftify_recon_run = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s --surf-reg FS --fs-license /freesurfer/license.txt --n_cpus 2 --verbose %s' % (freesurfer_environment_path, ciftify_work_dir, freesurfer_subject_dir, subject_name)
+ciftify_recon_run = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s --surf-reg FS --fs-license /freesurfer/license.txt --n_cpus 2 --verbose %s' % (ciftify_work_dir, freesurfer_subject_dir, subject_name)
 os.system(ciftify_recon_run)
 
 for i in inputImage:
@@ -138,10 +141,11 @@ for i in inputImage:
         os.system('cp %s %s' % (metric_out_right, gifti_surface_folder))
         
         # Run ciftify and map to cifti FSLR
-        ciftify_dtseries_run = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_subject_fmri --surf-reg FS --ciftify-work-dir %s %s %s %s -v' % (freesurfer_environment_path, ciftify_work_dir, i, subject_name, task_name)
+        ciftify_dtseries_run = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_subject_fmri --surf-reg FS --ciftify-work-dir %s %s %s %s -v' % (ciftify_work_dir, i, subject_name, task_name)
         os.system(ciftify_dtseries_run)
+        print('Saving the results for subject %s acquisition %s' % (subject_name, task_name))
         os.system('cp %s %s/' % (os.path.join(ciftify_work_dir, subject_name, 'MNINonLinear', 'Results', task_name, '%s_Atlas_s0.dtseries.nii' % task_name), cifti_surface_folder))
-        ciftify_visualization_command = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;cifti_vis_fmri subject --ciftify-work-dir %s %s %s' % (freesurfer_environment_path, ciftify_work_dir, task_name, subject_name)
+        ciftify_visualization_command = 'export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;cifti_vis_fmri subject --ciftify-work-dir %s %s %s' % (ciftify_work_dir, task_name, subject_name)
         os.system(ciftify_visualization_command)
         
         # Zip results
