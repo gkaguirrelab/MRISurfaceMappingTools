@@ -1,7 +1,7 @@
 # This makes a container for the gear. Replace the first path next to the second COPY function 
 # below with a path to your local compiled matlab function
 
-FROM neurodebian:xenial
+FROM ubuntu:latest
 MAINTAINER Ozzy(ozenctaskin@hotmail.com)
 
 #Copy everything into a container
@@ -23,20 +23,20 @@ RUN apt-get install -y \
     wget \
     zip \
     unzip \
-    ants \
     connectome-workbench
 
 # Install Anaconda
 RUN wget https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh
 RUN bash Anaconda3-2020.02-Linux-x86_64.sh -b -p /anaconda3
 ENV PATH=$PATH:/anaconda3/bin
+RUN conda update --all -y
+
+# Install the required python packages
+RUN pip install 'ciftify' 'hcp-utils==0.1.0' 
 
 # Install python2 for fslinstallation and install the newest verison of fsl
 RUN apt-get install python -y
 RUN python2 /fslinstaller.py -d /fsl 
-
-# Install the required python packages
-RUN pip install 'numpy==1.18.1' 'nibabel==3.1.0' 'neuropythy==0.11.5' 'nilearn==0.6.2' 'scikit-learn==0.22.1' 'matplotlib==3.1.3' 'pandas==1.0.3' 'scipy==1.4.1' 'hcp-utils==0.1.0' 'ciftify'
 
 # Download and install Freesurfer on call
 RUN wget https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.0/freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz

@@ -21,7 +21,8 @@ freesurfer_subject_dir = '/freesurfer/subjects'
 os.system('mkdir %s'%first_output_dir)
 freesurfer_environment_path = 'export FREESURFER_HOME=/freesurfer;/bin/bash -c \'source $FREESURFER_HOME/FeeSurferEnv.sh &>/dev/null\';export SUBJECTS_DIR=%s;/freesurfer/bin/' % freesurfer_subject_dir
 
-#Install bc
+#Install bc and gcc
+os.system('apt-get install -y build-essential')
 os.system('apt-get install bc')
 
 ################### Parse config ##############################################
@@ -74,13 +75,18 @@ standard_mesh_path = '/standard_mesh_atlases'
 standard_meshes = '/tmp/standard_mesh_atlases'
 os.system('unzip -q %s -d /tmp' % standard_mesh_path)
 
-################### Run Algorithm ################################
+################## Run Algorithm ################################
 
 # Run ciftify recon-all
 ciftify_work_dir = '/hcp_dir/'
 os.system('mkdir %s' % ciftify_work_dir)
 ciftify_recon_run = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s --surf-reg FS --fs-license /freesurfer/license.txt --n_cpus 2 --verbose %s' % (freesurfer_environment_path, ciftify_work_dir, freesurfer_subject_dir, subject_name)
 os.system(ciftify_recon_run)
+
+for i in inputImage:
+        name_without_path = os.path.split(i)[1]
+        task_name = os.path.splitext(name_without_path)[0]
+
 
 for i in inputImage:
     
@@ -126,7 +132,7 @@ for i in inputImage:
         gifti_converted_nat_left = os.path.join(first_output_dir, fmri_name_left + '.gii')
         gifti_converted_nat_right = os.path.join(first_output_dir, fmri_name_right + '.gii')
         convert_left = 'export PATH="/freesurfer/bin:$PATH";%s %s %s' % (os.path.join(freesurfer_environment_path, 'mri_convert.bin'),
-                                                                         native_left, gifti_converted_nat_left)
+                                                                          native_left, gifti_converted_nat_left)
         convert_right = 'export PATH="/freesurfer/bin:$PATH";%s %s %s' % (os.path.join(freesurfer_environment_path, 'mri_convert.bin'),
                                       native_right, gifti_converted_nat_right)
         os.system(convert_left)
@@ -142,7 +148,7 @@ for i in inputImage:
         os.system(ciftify_dtseries_run)
         os.system('cp %s %s/' % (os.path.join(ciftify_work_dir, subject_name, 'MNINonLinear', 'Results', task_name, '%s_Atlas_s0.dtseries.nii' % task_name), cifti_surface_folder))
         ciftify_visualization_command = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;cifti_vis_fmri subject --ciftify-work-dir %s %s %s' % (freesurfer_environment_path, ciftify_work_dir, task_name, subject_name)
-        os.system(ciftify_visualization_command)
+        os.system(ciftify_visualization_command)    
         
         # Zip results
         os.system('cd %s; zip -r -q %s *' % (main_task_folder, os.path.join(final_output_dir, '%s_surfaces.zip' % task_name)))
