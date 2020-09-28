@@ -2,7 +2,7 @@
 	"name": "vol2surf",
 	"label": "vol2surf: Map volumetric MRI images to fsaverage and FSLR surfaces",
 	"description": "This gear maps volumetric time-series or R2 maps to surfaces. The gear uses freesurfer and python tools (ciftify) to make FS, gifti, and cifti surfaces. The gear can work with single images or archives",
-	"version": "0.2.5",
+	"version": "0.2.6",
 	"inputs": {
 		"inputImageOrArchive": {
 			"base": "file",
@@ -27,7 +27,7 @@
 			"type": "string"
 		},
 		"imageName": {
-			"description": "Name of the image you want to process in a zip or tar archive. This is implemented so that single images can be extracted from an archive. If your input is a single image and not an archive, enter NA here. Otherwise, enter the full name of the image including the file extention located in your archive that you want to process. The image can be located anywhere in your zip archive. This gear will find it. But make sure that you do not have two different images with the same name in your archive. If you have a zip archive containing a bunch of images that are not located in nested folders (should be in the first level), you can enter 'all' without the single quotes and the gear will process all of the images in there",
+			"description": "Name of the image you want to process in a zip archive. This is implemented so that single images can be located in an archive. If your main input is a single nifti image and not an archive, enter NA here. If your input is a zip archive and you want to do the analysis on a single image located in that archive enter the full name of that image. The target image can be located in nested folders in that archive, the gear will find it. If you have an archive and you want to find and analyze multiple images of the same type in that archive, you can enter a small common part of the image names and all of the images that include that part will be found (e.g. you can enter something like desc-preproc_bold.nii.gz to find all the preprocessed images in an fmriprep archive)",
 			"type": "string"
 		},
 		"outputDiagnosticForAllTasks": {
