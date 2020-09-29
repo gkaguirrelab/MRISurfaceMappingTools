@@ -64,7 +64,8 @@ def map_fs2gifti(fs_gifti_left, fs_gifti_right, workbench_path, recon_all_folder
         
         # Make temp maps
         temporary_stuff = os.path.join('/tmp', 'temporary_gifti')
-        os.system('mkdir %s' % temporary_stuff)
+        if ~os.path.exists(temporary_stuff):
+            os.system('mkdir %s' % temporary_stuff)
         
         left_fs_white = os.path.join(recon_all_folder, 'surf', 'lh.white')
         left_fs_pial = os.path.join(recon_all_folder, 'surf', 'lh.pial') 

@@ -85,11 +85,6 @@ ciftify_recon_run = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anacon
 os.system(ciftify_recon_run)
 
 for i in inputImage:
-        name_without_path = os.path.split(i)[1]
-        task_name = os.path.splitext(name_without_path)[0]
-
-
-for i in inputImage:
     
     # Get the image name for ciftify folder name 
     name_without_path = os.path.split(i)[1]
