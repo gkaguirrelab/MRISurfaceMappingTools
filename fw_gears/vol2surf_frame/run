@@ -60,6 +60,12 @@ elif os.path.splitext(inputImageOrArchive)[1] == '.zip':
 else:
     raise RuntimeError('Image input is not a zip or nifti. Type unrecognized.')
 
+## Get the images that will be processed in the same location
+images_to_process = os.path.join('/opt/images_to_process')
+os.system('mkdir %s' % images_to_process)
+for rawimage in inputImage:
+    os.system('cp %s %s/' % (rawimage, images_to_process))
+
 ## Get the recon-all.
 if os.path.exists(zippedReconAll_path):
     zippedReconAll = os.path.join(zippedReconAll_path, os.listdir(zippedReconAll_path)[0])
@@ -84,10 +90,11 @@ os.system('mkdir %s' % ciftify_work_dir)
 ciftify_recon_run = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s --surf-reg FS --fs-license /freesurfer/license.txt --n_cpus 2 --verbose %s' % (freesurfer_environment_path, ciftify_work_dir, freesurfer_subject_dir, subject_name)
 os.system(ciftify_recon_run)
 
-for i in inputImage:
+for i in os.listdir(images_to_process):
+    path_to_i = os.path.join(images_to_process, i)
     
     # Get the image name for ciftify folder name 
-    name_without_path = os.path.split(i)[1]
+    name_without_path = os.path.split(path_to_i)[1]
     task_name = os.path.splitext(name_without_path)[0]
     if task_name[-3:] == 'nii':
         task_name = 'task_' + task_name[:-4]
@@ -104,11 +111,11 @@ for i in inputImage:
                                             gifti_surface_folder, cifti_surface_folder))
           
     # Get the image type
-    image = nb.load(i)
+    image = nb.load(path_to_i)
     image_type = str(type(image))[16:21]
     
     if image_type == 'nifti': 
-        native_left, native_right, fsaverage_left, fsaverage_right = map_vol2fs(i, 
+        native_left, native_right, fsaverage_left, fsaverage_right = map_vol2fs(path_to_i, 
                                                                                 freesurfer_subject_dir, 
                                                                                 subject_name, 
                                                                                 freesurfer_environment_path,
@@ -140,7 +147,7 @@ for i in inputImage:
         os.system('cp %s %s' % (metric_out_right, gifti_surface_folder))
         
         # Run ciftify and map to cifti FSLR
-        ciftify_dtseries_run = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_subject_fmri --surf-reg FS --ciftify-work-dir %s %s %s %s -v' % (freesurfer_environment_path, ciftify_work_dir, i, subject_name, task_name)
+        ciftify_dtseries_run = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_subject_fmri --surf-reg FS --ciftify-work-dir %s %s %s %s -v' % (freesurfer_environment_path, ciftify_work_dir, path_to_i, subject_name, task_name)
         os.system(ciftify_dtseries_run)
         os.system('cp %s %s/' % (os.path.join(ciftify_work_dir, subject_name, 'MNINonLinear', 'Results', task_name, '%s_Atlas_s0.dtseries.nii' % task_name), cifti_surface_folder))
         ciftify_visualization_command = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;cifti_vis_fmri subject --ciftify-work-dir %s %s %s' % (freesurfer_environment_path, ciftify_work_dir, task_name, subject_name)
