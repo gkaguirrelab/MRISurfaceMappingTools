@@ -3,11 +3,16 @@ from map_vol2fs import map_vol2fs
 from map_fs2gifti import map_fs2gifti
 from map_vol2cifti import map_vol2cifti
 
+'''
+This is a script to run vol2surf function. Outputs surface files in cifti and
+gifti FSLR_32k, and MGZ files in native FS and template space.
+'''
+
 ############################ Set paths here ##################################
 
 # Path to the input image. Specify path in square paranthesis. You can specify
 # multiple paths by separating them with commas. However, the images should
-# belong to the same subject as we specify one recon-all folder.
+# belong to the same subject as we only specify one recon-all folder.
 input_volume = ['']
 
 # Path to a location where the outputs will be saved. The wrapper creates 

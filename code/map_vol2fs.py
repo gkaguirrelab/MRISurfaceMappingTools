@@ -3,7 +3,7 @@ import os
 def map_vol2fs(volume_to_interpolate, subject_name, native_output_path, fsaverage_output_path, surf_temp='fsaverage', freesurfer_environment_path=''):
     
     '''
-    This function properly maps human volumetric time-series or R2 maps to 
+    This function maps human volumetric time-series or R2 maps to 
     subject's native space and to any template provided by Freesurfer   
     (eg. fsaverage, fsaverage_sym). Make sure that you set your Freesurfer
     subjects directory and run recon-all on the subject prior to running this 

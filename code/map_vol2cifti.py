@@ -54,19 +54,16 @@ def map_vol2cifti(input_volume, freesurfer_subject_dir, subject_name, intermedia
         # Run ciftify recon-all
         ciftify_work_dir = '%s/hcp_workdir/' % intermediate_folder
         os.system('mkdir %s' % ciftify_work_dir)
-        ciftify_recon_run = 'export PATH="%s:$PATH";FSLDIR=%s;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s --surf-reg FS --fs-license %s --n_cpus 2 --verbose %s' % (freesurfer_environment_path, 
-                                                                                                                                                                                                                                                                  fsl_environment_path, ciftify_work_dir, 
-                                                                                                                                                                                                                                                                  freesurfer_subject_dir, freesurfer_license_file,
-                                                                                                                                                                                                                                                                  subject_name)
+        ciftify_recon_run = 'ciftify_recon_all --ciftify-work-dir %s --fs-subjects-dir %s --surf-reg FS --fs-license %s --n_cpus 2 --verbose %s' % (ciftify_work_dir, freesurfer_subject_dir, freesurfer_license_file, subject_name)
         os.system(ciftify_recon_run)
     else:
         ciftify_work_dir = run_ciftify_recon_all
 
     # Run ciftify and map to cifti FSLR
-    ciftify_dtseries_run = 'export PATH="%s:$PATH";FSLDIR=%s;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;ciftify_subject_fmri --surf-reg FS --ciftify-work-dir %s %s %s %s -v' % (freesurfer_environment_path, fsl_environment_path, ciftify_work_dir, input_volume, subject_name, task_name)
+    ciftify_dtseries_run = 'ciftify_subject_fmri --surf-reg FS --ciftify-work-dir %s %s %s %s -v' % (ciftify_work_dir, input_volume, subject_name, task_name)
     os.system(ciftify_dtseries_run)
     os.system('cp %s %s/' % (os.path.join(ciftify_work_dir, subject_name, 'MNINonLinear', 'Results', task_name, '%s_Atlas_s0.dtseries.nii' % task_name), output_folder))
-    ciftify_visualization_command = 'export PATH="%s:$PATH";FSLDIR=%s;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;cifti_vis_fmri subject --ciftify-work-dir %s %s %s' % (freesurfer_environment_path, fsl_environment_path, ciftify_work_dir, task_name, subject_name)
+    ciftify_visualization_command = 'cifti_vis_fmri subject --ciftify-work-dir %s %s %s' % (ciftify_work_dir, task_name, subject_name)
     os.system(ciftify_visualization_command)
     
     return (ciftify_work_dir)
