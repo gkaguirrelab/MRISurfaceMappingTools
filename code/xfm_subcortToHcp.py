@@ -1,6 +1,6 @@
 import os
 
-def segment2cifti(recon_all_folder, segmentation_folder, subcortex_label, mni2mm, empty_cifti_cortex_left, empty_cifti_cortex_right, template_cifti, TR, workdir, outputdir):
+def xfm_subcortToHcp(recon_all_folder, segmentation_folder, subcortex_label, mni2mm, empty_cifti_cortex_left, empty_cifti_cortex_right, template_cifti, TR, workdir, outputdir):
     
     '''
     This script maps volumetric subThalamic segmentations to cifti volume to 
