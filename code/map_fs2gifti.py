@@ -124,19 +124,9 @@ def map_fs2gifti(fs_map_left, fs_map_right, recon_all_folder, standard_mesh_atla
         os.system(make_surfaces_right)
         
         # Make gifti maps
-        fs_gifti_left
-        left_gifti_sphere
-        left_new_sphere
         metric_out_left = os.path.join(output_path, 'fs_LR.L.%s_%s.func.gii' % (resolution, left_name))
-        left_midthickness_current_out
-        left_midthickness_new_out
-        
-        fs_gifti_right
-        right_gifti_sphere
-        right_new_sphere
         metric_out_right = os.path.join(output_path, 'fs_LR.R.%s_%s.func.gii' % (resolution, right_name)) 
-        right_midthickness_current_out
-        right_midthickness_new_out
+
         
         map_surfaces_left = '%s -metric-resample %s %s %s ADAP_BARY_AREA %s -area-surfs %s %s' % (os.path.join(workbench_path, 'wb_command'),
                                                                                                   fs_gifti_left, left_gifti_sphere,
