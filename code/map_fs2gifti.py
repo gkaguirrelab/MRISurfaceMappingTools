@@ -83,8 +83,8 @@ def map_fs2gifti(fs_map_left, fs_map_right, recon_all_folder, standard_mesh_atla
                                              'fs_LR.R.midthickness_va_avg.%s_fs_LR.shape.gii' % resolution)     
        
         # Assemble the run commands and call  
-        wb_run_left_string = '%s;%s -metric-resample %s %s %s ADAP_BARY_AREA %s -area-metrics %s %s' % (freesurfer_environment_path, os.path.join(workbench_path, 'wb_command'), fs_gifti_left, current_sphere_left, new_sphere_left, metric_out_left, current_area_left, new_area_left)
-        wb_run_right_string = '%s;%s -metric-resample %s %s %s ADAP_BARY_AREA %s -area-metrics %s %s' % (freesurfer_environment_path, os.path.join(workbench_path, 'wb_command'), fs_gifti_right, current_sphere_right, new_sphere_right, metric_out_right, current_area_right, new_area_right)
+        wb_run_left_string = '%s -metric-resample %s %s %s ADAP_BARY_AREA %s -area-metrics %s %s' % (os.path.join(workbench_path, 'wb_command'), fs_gifti_left, current_sphere_left, new_sphere_left, metric_out_left, current_area_left, new_area_left)
+        wb_run_right_string = '%s -metric-resample %s %s %s ADAP_BARY_AREA %s -area-metrics %s %s' % (os.path.join(workbench_path, 'wb_command'), fs_gifti_right, current_sphere_right, new_sphere_right, metric_out_right, current_area_right, new_area_right)
         
         os.system(wb_run_left_string)
         os.system(wb_run_right_string)
@@ -108,18 +108,18 @@ def map_fs2gifti(fs_map_left, fs_map_right, recon_all_folder, standard_mesh_atla
         right_midthickness_new_out = os.path.join(temporary_intermediate, 'sub.rh.midthickness.%s_fs_LR.surf.gii' % resolution)
         right_gifti_sphere = os.path.join(temporary_intermediate, 'rh.sphere.reg.surf.gii')
     
-        make_surfaces_left = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;%s -freesurfer-resample-prep %s %s %s %s %s %s %s' % (freesurfer_environment_path, os.path.join(workbench_path, 'wb_shortcuts'),
-                                                                                                                                                                                                                                                       left_fs_white, left_fs_pial,
-                                                                                                                                                                                                                                                       left_fs_sphere, left_new_sphere,
-                                                                                                                                                                                                                                                       left_midthickness_current_out,
-                                                                                                                                                                                                                                                       left_midthickness_new_out,
-                                                                                                                                                                                                                                                       left_gifti_sphere)
-        make_surfaces_right = '%s;export PATH="/freesurfer/bin:$PATH";export PATH="/anaconda3/bin:$PATH";FSLDIR=/fsl;. ${FSLDIR}/etc/fslconf/fsl.sh;PATH=${FSLDIR}/bin:${PATH};export FSLDIR PATH;%s -freesurfer-resample-prep %s %s %s %s %s %s %s' % (freesurfer_environment_path, os.path.join(workbench_path, 'wb_shortcuts'),
-                                                                                                                                                                                                                                                        right_fs_white, right_fs_pial,
-                                                                                                                                                                                                                                                        right_fs_sphere, right_new_sphere,
-                                                                                                                                                                                                                                                        right_midthickness_current_out,
-                                                                                                                                                                                                                                                        right_midthickness_new_out,
-                                                                                                                                                                                                                                                        right_gifti_sphere) 
+        make_surfaces_left = '%s -freesurfer-resample-prep %s %s %s %s %s %s %s' % (os.path.join(workbench_path, 'wb_shortcuts'),
+                                                                                    left_fs_white, left_fs_pial,
+                                                                                    left_fs_sphere, left_new_sphere,
+                                                                                    left_midthickness_current_out,
+                                                                                    left_midthickness_new_out,
+                                                                                    left_gifti_sphere)
+        make_surfaces_right = '%s -freesurfer-resample-prep %s %s %s %s %s %s %s' % (os.path.join(workbench_path, 'wb_shortcuts'),
+                                                                                     right_fs_white, right_fs_pial,
+                                                                                     right_fs_sphere, right_new_sphere,
+                                                                                     right_midthickness_current_out,
+                                                                                     right_midthickness_new_out,
+                                                                                     right_gifti_sphere) 
         os.system(make_surfaces_left)
         os.system(make_surfaces_right)
         
@@ -138,16 +138,16 @@ def map_fs2gifti(fs_map_left, fs_map_right, recon_all_folder, standard_mesh_atla
         right_midthickness_current_out
         right_midthickness_new_out
         
-        map_surfaces_left = '%s;%s -metric-resample %s %s %s ADAP_BARY_AREA %s -area-surfs %s %s' % (freesurfer_environment_path, os.path.join(workbench_path, 'wb_command'),
-                                                                                                     fs_gifti_left, left_gifti_sphere,
-                                                                                                     left_new_sphere, metric_out_left,
-                                                                                                     left_midthickness_current_out,
-                                                                                                     left_midthickness_new_out)
-        map_surfaces_right = '%s;%s -metric-resample %s %s %s ADAP_BARY_AREA %s -area-surfs %s %s' % (freesurfer_environment_path, os.path.join(workbench_path, 'wb_command'),
-                                                                                                      fs_gifti_right, right_gifti_sphere,
-                                                                                                      right_new_sphere, metric_out_right,
-                                                                                                      right_midthickness_current_out,
-                                                                                                      right_midthickness_new_out)        
+        map_surfaces_left = '%s -metric-resample %s %s %s ADAP_BARY_AREA %s -area-surfs %s %s' % (os.path.join(workbench_path, 'wb_command'),
+                                                                                                  fs_gifti_left, left_gifti_sphere,
+                                                                                                  left_new_sphere, metric_out_left,
+                                                                                                  left_midthickness_current_out,
+                                                                                                  left_midthickness_new_out)
+        map_surfaces_right = '%s -metric-resample %s %s %s ADAP_BARY_AREA %s -area-surfs %s %s' % (os.path.join(workbench_path, 'wb_command'),
+                                                                                                   fs_gifti_right, right_gifti_sphere,
+                                                                                                   right_new_sphere, metric_out_right,
+                                                                                                   right_midthickness_current_out,
+                                                                                                   right_midthickness_new_out)        
         os.system(map_surfaces_left)
         os.system(map_surfaces_right)
  
