@@ -1,7 +1,7 @@
 import os 
 import nibabel as nb
 
-def map_fs2gifti(fs_map_left, fs_map_right, recon_all_folder, standard_mesh_atlases_folder, temporary_intermediate, output_path, source_space='native', resolution='32k', workbench_path='', freesurfer_environment_path=''):
+def map_fs2gifti(fs_map_left, fs_map_right, recon_all_folder, standard_mesh_atlases_folder, temporary_intermediate, output_path, source_space='native', resolution='32k', workbench_path='', freesurfer_environment_path='', resampling_method='ADAP_BARY_AREA'):
     
     '''
     This function maps time-series surface images that are in fsaverage or
@@ -33,6 +33,8 @@ def map_fs2gifti(fs_map_left, fs_map_right, recon_all_folder, standard_mesh_atla
           already set path to it can call it from your terminal.
         - freesurfer_environment_path = Path to freesurfer folder. Can be left
           empty if you already set path to it and can call it from terminal.
+        - resampling_method = wb resampling method can be 'ADAP_BARY_AREA', 
+          'BARYCENTRIC', or 'BARYCENTRIC -largest' 
           
     Outputs:
         Left and right hemispere gifti FSLR images. Also, returns path to the
@@ -128,14 +130,14 @@ def map_fs2gifti(fs_map_left, fs_map_right, recon_all_folder, standard_mesh_atla
         metric_out_right = os.path.join(output_path, 'fs_LR.R.%s_%s.func.gii' % (resolution, right_name)) 
 
         
-        map_surfaces_left = '%s -metric-resample %s %s %s ADAP_BARY_AREA %s -area-surfs %s %s' % (os.path.join(workbench_path, 'wb_command'),
+        map_surfaces_left = '%s -metric-resample %s %s %s %s %s -area-surfs %s %s' % (os.path.join(workbench_path, 'wb_command'),
                                                                                                   fs_gifti_left, left_gifti_sphere,
-                                                                                                  left_new_sphere, metric_out_left,
+                                                                                                  left_new_sphere, resampling_method, metric_out_left,
                                                                                                   left_midthickness_current_out,
                                                                                                   left_midthickness_new_out)
-        map_surfaces_right = '%s -metric-resample %s %s %s ADAP_BARY_AREA %s -area-surfs %s %s' % (os.path.join(workbench_path, 'wb_command'),
+        map_surfaces_right = '%s -metric-resample %s %s %s %s %s -area-surfs %s %s' % (os.path.join(workbench_path, 'wb_command'),
                                                                                                    fs_gifti_right, right_gifti_sphere,
-                                                                                                   right_new_sphere, metric_out_right,
+                                                                                                   right_new_sphere, resampling_method, metric_out_right,
                                                                                                    right_midthickness_current_out,
                                                                                                    right_midthickness_new_out)        
         os.system(map_surfaces_left)
