@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GIFTI xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="http://brainvis.wustl.edu/caret6/xml_schemas/GIFTI_Caret.xsd"
+       Version="1"
+       NumberOfDataArrays="1">
+   <MetaData>
+      <MD>
+         <Name><![CDATA[AnatomicalStructurePrimary]]></Name>
+         <Value><![CDATA[CortexRight]]></Value>
+      </MD>
+      <MD>
+         <Name><![CDATA[ParentProvenance]]></Name>
+         <Value><![CDATA[/home/ozzy/Documents/MATLAB/projects/MRISurfaceMappingTools/code/utilities/template.dtseries.nii:
+/usr/bin/wb_command -cifti-convert -from-gifti-ext /firstOutput/maps_cifti/ang_map.dtseries.nii.gii /firstOutput/maps_cifti/ang_map.dtseries.nii
+
+]]></Value>
+      </MD>
+      <MD>
+         <Name><![CDATA[ProgramProvenance]]></Name>
+         <Value><![CDATA[Connectome Workbench
+Type: Command Line Application
+Version: 1.5.0
+Qt Compiled Version: 5.12.8
+Qt Runtime Version: 5.12.8
+Commit: unknown
+Commit Date: unknown
+Compiled with OpenMP: YES
+Compiler: c++ (/usr/lib/ccache)
+Compiler Version: 9.3.0
+Compiled Debug: NO
+Operating System: Linux
+]]></Value>
+      </MD>
+      <MD>
+         <Name><![CDATA[Provenance]]></Name>
+         <Value><![CDATA[wb_command -cifti-separate /home/ozzy/Documents/MATLAB/projects/MRISurfaceMappingTools/code/utilities/template.dtseries.nii COLUMN -volume-all volume.nii.gz -metric CORTEX_LEFT left_cor.shape.gii -metric CORTEX_RIGHT right_cor.shape.gii]]></Value>
+      </MD>
+      <MD>
+         <Name><![CDATA[WorkingDirectory]]></Name>
+         <Value><![CDATA[/home/ozzy/Documents/MATLAB/projects/MRISurfaceMappingTools/code/utilities]]></Value>
+      </MD>
+   </MetaData>
+   <LabelTable>
+      <Label Key="0" Red="1" Green="1" Blue="1" Alpha="0"><![CDATA[???]]></Label>
+   </LabelTable>
+<DataArray Intent="NIFTI_INTENT_NORMAL"
+           DataType="NIFTI_TYPE_FLOAT32"
+           ArrayIndexingOrder="RowMajorOrder"
+           Dimensionality="1"
+           Dim0="32492"
+           Encoding="GZipBase64Binary"
+           Endian="LittleEndian"
+           ExternalFileName=""
+           ExternalFileOffset="0">
+   <MetaData>
+      <MD>
+         <Name><![CDATA[Name]]></Name>
+         <Value><![CDATA[]]></Value>
+      </MD>
+   </MetaData>
+   <Data>eJzt3EtOAzEQBNDc/1TcDMQCCUX5jT/jas8r6S0QSnc5oIzZcLt9fd+e+s2r7796XdW0nLeSxHgPPotz1clVzlMxu5zFGdancn+9z0u1zpV+r6v2TOya3jG5X+q9IvEumnbnT+qT0uVdjzP6rO6wcv+nu0fvX7H3yM4Re4/u69nZsqtlX+ueI7tm75g5f9bsnrnPZvfOvJ89ct6oWcDeerO6PwCkq/q8/P+sr3KGaveUV3ertP5V7oRHomN/v7N7pnZrTWKnWb2S+qR06c0OHUak2u4Ve0cl8YyjkrBn9o6Z82fNrjBz5LyUOSLv0vv8BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgCs6mpW7V3YFqKL651/lz/DKz6Cq3av3Xt1jt/e4YtfVPSp3TO6X2i251+oOqX1SuiT0SOhwNd5zAM706Lnz6P56NKvPBQAAAAAAAAAAAAAAAAAAAAAAAEC/qv9frvr/zWvJ6s6jzpF2nt7of73uOmf3PbvzqFTpObPrrNzP/vs6pd+rfNo1Iam9RESkdmY/T868gyTPnXFfTJs16u+MVa9vfW3L69zj2nLm36H02fVnt+O5djvTLufZ6TNwh3NUP0Pl/rt0X93lCp1X99ix6+oOO3QEAAAAAAAAAAAAAAAAAAB29QNrtLrD</Data>
+</DataArray>
+</GIFTI>
