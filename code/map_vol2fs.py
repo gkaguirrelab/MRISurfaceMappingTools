@@ -1,6 +1,6 @@
 import os 
 
-def map_vol2fs(volume_to_interpolate, subject_name, native_output_path, fsaverage_output_path, surf_temp='fsaverage', freesurfer_environment_path=''):
+def map_vol2fs(volume_to_interpolate, subject_name, native_output_path, fsaverage_output_path, surf_temp='fsaverage', interp='trilinear', freesurfer_environment_path=''):
     
     '''
     This function maps human volumetric time-series or R2 maps to 
@@ -57,11 +57,11 @@ def map_vol2fs(volume_to_interpolate, subject_name, native_output_path, fsaverag
     # Register map to specified Freesurfer template
     fsaverage_left = os.path.join(fsaverage_output_path, 'lh.%s.' % surf_temp + fmri_name + '.mgz')
     fsaverage_right = os.path.join(fsaverage_output_path, 'rh.%s.'  % surf_temp + fmri_name + '.mgz')
-    os.system('%s --mov %s --regheader %s --projfrac 0.5 --trgsubject %s --hemi lh --o %s' % (os.path.join(freesurfer_environment_path, 'mri_vol2surf'),
-                                                                                              volume_to_interpolate, subject_name, surf_temp,
-                                                                                              fsaverage_left))
-    os.system('%s --mov %s --regheader %s --projfrac 0.5 --trgsubject %s --hemi rh --o %s' % (os.path.join(freesurfer_environment_path, 'mri_vol2surf'),
-                                                                                              volume_to_interpolate, subject_name, surf_temp,
-                                                                                              fsaverage_right))
+    os.system('%s --mov %s --regheader %s --projfrac 0.5 --interp %s --trgsubject %s --hemi lh --o %s' % (os.path.join(freesurfer_environment_path, 'mri_vol2surf'),
+                                                                                                          volume_to_interpolate, subject_name, interp, surf_temp,
+                                                                                                          fsaverage_left))
+    os.system('%s --mov %s --regheader %s --projfrac 0.5 --interp %s --trgsubject %s --hemi rh --o %s' % (os.path.join(freesurfer_environment_path, 'mri_vol2surf'),
+                                                                                                          volume_to_interpolate, subject_name, interp, surf_temp,
+                                                                                                          fsaverage_right))
     
     return (native_left, native_right, fsaverage_left, fsaverage_right)
