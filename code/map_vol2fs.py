@@ -49,10 +49,10 @@ def map_vol2fs(volume_to_interpolate, subject_name, native_output_path, fsaverag
     # Register map to subject's native surface
     native_left = os.path.join(native_output_path, 'lh.native.' + fmri_name + '.mgz')
     native_right = os.path.join(native_output_path, 'rh.native.' + fmri_name + '.mgz')
-    os.system('%s --mov %s --regheader %s --projfrac 0.5 --hemi lh --o %s' % (os.path.join(freesurfer_environment_path, 'mri_vol2surf'),
-                                                                              volume_to_interpolate, subject_name, native_left))
-    os.system('%s --mov %s --regheader %s --projfrac 0.5 --hemi rh --o %s' % (os.path.join(freesurfer_environment_path, 'mri_vol2surf'),
-                                                                              volume_to_interpolate, subject_name, native_right))
+    os.system('%s --mov %s --regheader %s --projfrac 0.5 --interp %s --hemi lh --o %s' % (os.path.join(freesurfer_environment_path, 'mri_vol2surf'),
+                                                                                          volume_to_interpolate, subject_name, interp, native_left))
+    os.system('%s --mov %s --regheader %s --projfrac 0.5 --interp %s --hemi rh --o %s' % (os.path.join(freesurfer_environment_path, 'mri_vol2surf'),
+                                                                                          volume_to_interpolate, subject_name, interp, native_right))
     
     # Register map to specified Freesurfer template
     fsaverage_left = os.path.join(fsaverage_output_path, 'lh.%s.' % surf_temp + fmri_name + '.mgz')
