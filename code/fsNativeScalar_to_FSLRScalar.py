@@ -44,6 +44,6 @@ def fsNativeScalar_to_FSLRScalar(left_hemi_scalar, right_hemi_scalar, subject_fr
     if interp == 'BARYCENTRIC':
         os.system(f'wb_command -metric-resample {scalar_in} {current_gifti_sphere} {new_sphere} BARYCENTRIC {right_output_scalar} -area-surfs {midthickness_current} {midthickness_new} -largest')
     if interp == 'ADAP_BARY_AREA':
-        os.system(f'wb_command -metric-resample {scalar_in} {current_gifti_sphere} {new_sphere} ADAP_BARY_AREA {left_output_scalar} -area-surfs {midthickness_current} {midthickness_new}')
+        os.system(f'wb_command -metric-resample {scalar_in} {current_gifti_sphere} {new_sphere} ADAP_BARY_AREA {right_output_scalar} -area-surfs {midthickness_current} {midthickness_new}')
     else:
         raise ValueError("Interpolation method is unknown. Use ADAP_BARY_AREA or BARYCENTRIC")
